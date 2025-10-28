@@ -1,8 +1,5 @@
 <script setup lang="ts">
-definePageMeta({
-  layout: 'paroquia',
-})
-
+// Não usar definePageMeta quando usar NuxtLayout explicitamente com slots
 const route = useRoute()
 const paroquiaId = route.params.id as string
 
@@ -40,11 +37,8 @@ function formatDate(dateString: string) {
 <template>
   <NuxtLayout name="paroquia">
     <template #hero>
-      <v-sheet
-        :image="paroquia ? getImageUrl(paroquia.capa, { width: 1200, height: 300 }) : undefined"
-        :color="!paroquia?.capa ? 'grey' : undefined"
-        height="300"
-        class="d-flex align-end position-relative hero-section"
+      <div
+        class="custom-hero-banner"
         :style="{
           backgroundImage: paroquia?.capa
             ? `linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%), url(${getImageUrl(paroquia.capa, { width: 1200, height: 300 })})`
@@ -64,7 +58,7 @@ function formatDate(dateString: string) {
             <span class="text-h6 text-white">Araripina, PE</span>
           </div>
         </v-container>
-      </v-sheet>
+      </div>
     </template>
 
     <!-- Botões de Ação Rápida -->
@@ -242,8 +236,12 @@ function formatDate(dateString: string) {
 </template>
 
 <style scoped>
-.hero-section {
+.custom-hero-banner {
   margin-top: 56px;
+  height: 300px;
+  display: flex;
+  align-items: flex-end;
+  position: relative;
 }
 
 .action-card {
