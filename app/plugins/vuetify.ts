@@ -2,9 +2,8 @@ import type { ThemeDefinition } from 'vuetify'
 import { Icon } from '@iconify/vue'
 import { createVuetify } from 'vuetify'
 import { VCalendar } from 'vuetify/labs/VCalendar'
+import { en, pt } from 'vuetify/locale'
 
-// import this after install `@mdi/font` package
-import '@mdi/font/css/materialdesignicons.css'
 import 'vuetify/styles'
 
 /**
@@ -309,20 +308,17 @@ export default defineNuxtPlugin((app) => {
         cidadeTemaEscuro: createCidadeTemaEscuro(),
       },
     },
+    locale: {
+      locale: 'pt',
+      fallback: 'en',
+      messages: { en, pt },
+    },
     icons: {
-      // Mantém compatibilidade total com MDI (fonte) e habilita Iconify como set adicional.
-      // Para usar Iconify, use strings com prefixo de coleção (ex.: 'flat-color-icons:linux').
-      defaultSet: 'mdi',
+      defaultSet: 'fluentColor',
       sets: {
-        iconify: {
-          component: Icon as any, // SSR-friendly e aceita width/height
+        fluentColor: {
+          component: Icon as any,
         },
-      },
-      aliases: {
-        // Exemplos solicitados
-        fcLinux: 'flat-color-icons:linux',
-        suRocket: 'streamline-ultimate:rocket-launch',
-        flCalendar: 'fluent-color:calendar-20-regular',
       },
     },
     defaults: {

@@ -1,259 +1,284 @@
 <script setup lang="ts">
+import type { Paroquia } from '~/types/schema'
+
 // Layout específico para páginas de paróquias - mobile-first
 const route = useRoute()
+const router = useRouter()
 const activeTab = ref('inicio')
 
-// Mock data da paróquia - será substituído por dados do Directus
-const paroquia = ref({
-  nome: 'Paróquia São José',
-  cidade: 'São Paulo',
-  uf: 'SP',
-  fotoCapa: '/api/placeholder/800/300',
-  parocoNome: 'Pe. João Silva',
-  parocoFoto: '/api/placeholder/100/100',
-  whatsapp: '5511999999999',
-  instagram: '@paroquiasaojose',
-  youtube: '@paroquiasaojose',
-  site: 'https://paroquiasaojose.com.br',
-  telefone: '(11) 3333-4444',
-  endereco: 'Rua das Flores, 123 - Centro',
-})
+// Composable para assets do Directus
+const { getImageUrl } = useDirectusAsset()
+
+// Buscar dados da paróquia
+const paroquiaId = computed(() => route.params.id as string)
+
+const { data: paroquia } = await useFetch<Paroquia>(`/api/paroquia/${paroquiaId.value}`)
 
 // Navegação bottom
-const navigationItems = [
-  { icon: 'mdi-home', text: 'Início', value: 'inicio', to: '/paroquias/1' },
-  { icon: 'mdi-calendar', text: 'Agenda', value: 'agenda', to: '/paroquias/1/agenda' },
-  { icon: 'mdi-church', text: 'Capelas', value: 'capelas', to: '/paroquias/1/capelas' },
-  { icon: 'mdi-account-group', text: 'Comunidades', value: 'comunidades', to: '/paroquias/1/comunidades' },
-  { icon: 'mdi-dots-horizontal', text: 'Mais', value: 'mais', to: '/paroquias/1/mais' },
-]
+const navigationItems = computed(() => [
+  { icon: 'mdi-home', text: 'Início', value: 'inicio', to: `/p/${paroquiaId.value}` },
+  { icon: 'mdi-calendar', text: 'Agenda', value: 'agenda', to: `/p/${paroquiaId.value}/agenda` },
+  { icon: 'mdi-church', text: 'Capelas', value: 'capelas', to: `/p/${paroquiaId.value}/capelas` },
+  { icon: 'mdi-account-group', text: 'Comunidades', value: 'comunidades', to: `/p/${paroquiaId.value}/comunidades` },
+  { icon: 'mdi-dots-horizontal', text: 'Mais', value: 'mais', to: `/p/${paroquiaId.value}/mais` },
+])
 
 // Atualiza tab ativa baseada na rota
 watch(() => route.path, (newPath) => {
-  const matchedItem = navigationItems.find(item => newPath.includes(item.value))
+  const matchedItem = navigationItems.value.find(item => newPath.includes(item.value))
   if (matchedItem) {
     activeTab.value = matchedItem.value
   }
 }, { immediate: true })
-
-// Scroll behavior
-const isScrolled = ref(false)
-
-function handleScroll() {
-  isScrolled.value = window.scrollY > 20
-}
-
-onMounted(() => {
-  window.addEventListener('scroll', handleScroll)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll)
-})
 </script>
 
 <template>
   <v-app>
-    <!-- App Bar com comportamento de scroll -->
+    <!-- App Bar minimalista -->
     <v-app-bar
-      :elevation="isScrolled ? 4 : 0"
-      scroll-behavior="elevate"
-      color="surface"
-      :class="{ 'app-bar-scrolled': isScrolled }"
+      flat
+      color="primary"
+      height="56"
+      class="app-bar-paroquia"
     >
       <template #prepend>
         <v-btn
-          icon="mdi-arrow-left"
-          @click="$router.back()"
-        />
+          icon
+          variant="text"
+          color="white"
+          @click="router.back()"
+        >
+          <v-icon>mdi-arrow-left</v-icon>
+        </v-btn>
       </template>
 
-      <v-app-bar-title class="text-body-1 font-weight-medium">
-        {{ paroquia.nome }}
+      <v-app-bar-title class="text-white text-body-1 font-weight-medium">
+        {{ paroquia?.nome || 'Paróquia' }}
       </v-app-bar-title>
 
       <template #append>
         <v-btn
-          icon="mdi-magnify"
+          icon
+          variant="text"
+          color="white"
           @click="() => {}"
-        />
-        <v-btn
-          icon="mdi-bell-outline"
-          @click="() => {}"
-        />
+        >
+          <v-icon>mdi-share-variant</v-icon>
+        </v-btn>
       </template>
     </v-app-bar>
 
     <!-- Main Content -->
     <v-main class="bg-grey-lighten-4">
-      <!-- Hero Section com foto de capa -->
-      <v-sheet
-        :image="paroquia.fotoCapa"
-        height="200"
-        class="d-flex align-end position-relative"
-      >
-        <div class="hero-overlay" />
-        <v-container class="position-relative">
-          <h1 class="text-h5 text-white font-weight-bold mb-1">
-            {{ paroquia.nome }}
-          </h1>
-          <div class="d-flex align-center text-white">
-            <v-icon size="16" class="mr-1">
-              mdi-map-marker
-            </v-icon>
-            <span class="text-body-2">{{ paroquia.cidade }}, {{ paroquia.uf }}</span>
-          </div>
-        </v-container>
-      </v-sheet>
+      <!-- Hero Section com foto de capa - Pode ser customizado via slot -->
+      <slot name="hero">
+        <v-sheet
+          :image="paroquia ? getImageUrl(paroquia.capa, { width: 1200, height: 300 }) : undefined"
+          :color="!paroquia?.capa ? 'primary' : undefined"
+          height="200"
+          class="d-flex align-end position-relative hero-section"
+        >
+          <div v-if="paroquia?.capa" class="hero-overlay" />
+          <v-container class="position-relative py-4">
+            <h1 class="text-h5 text-white font-weight-bold mb-1">
+              {{ paroquia?.nome }}
+            </h1>
+            <div class="d-flex align-center text-white">
+              <v-icon size="16" class="mr-1">
+                mdi-map-marker
+              </v-icon>
+              <span class="text-body-2">{{ paroquia?.cidade }}, {{ paroquia?.uf }}</span>
+            </div>
+          </v-container>
+        </v-sheet>
+      </slot>
 
-      <!-- Quick Actions - Ações Rápidas -->
-      <v-sheet class="quick-actions-bar" elevation="2">
+      <!-- Quick Actions - Ações Rápidas Fixas -->
+      <v-sheet
+        class="quick-actions-bar elevation-4"
+        color="surface"
+      >
         <v-container class="py-3">
-          <v-row dense>
-            <v-col cols="3" class="text-center">
+          <v-row dense justify="center">
+            <v-col v-if="paroquia?.whatsapp" cols="3" class="text-center">
               <v-btn
-                :href="`https://wa.me/${paroquia.whatsapp}`"
+                :href="`https://wa.me/${paroquia.whatsapp.replace(/\D/g, '')}`"
                 target="_blank"
                 icon
                 variant="flat"
+                size="small"
                 color="success"
-                size="large"
                 class="mb-1"
               >
-                <v-icon>mdi-whatsapp</v-icon>
+                <v-icon size="20">
+                  mdi-whatsapp
+                </v-icon>
               </v-btn>
-              <div class="text-caption">
+              <div class="text-caption text-truncate">
                 WhatsApp
               </div>
             </v-col>
-            <v-col cols="3" class="text-center">
+            <v-col v-if="paroquia?.instagram" cols="3" class="text-center">
               <v-btn
-                :href="`https://instagram.com/${paroquia.instagram}`"
+                :href="paroquia.instagram.startsWith('http') ? paroquia.instagram : `https://instagram.com/${paroquia.instagram.replace('@', '')}`"
                 target="_blank"
                 icon
                 variant="flat"
-                color="pink-accent-2"
-                size="large"
+                size="small"
                 class="mb-1"
+                style="background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%); color: white;"
               >
-                <v-icon>mdi-instagram</v-icon>
+                <v-icon size="20">
+                  mdi-instagram
+                </v-icon>
               </v-btn>
-              <div class="text-caption">
+              <div class="text-caption text-truncate">
                 Instagram
               </div>
             </v-col>
-            <v-col cols="3" class="text-center">
+            <v-col v-if="paroquia?.youtube" cols="3" class="text-center">
               <v-btn
-                :href="`https://youtube.com/${paroquia.youtube}`"
+                :href="paroquia.youtube.startsWith('http') ? paroquia.youtube : `https://youtube.com/${paroquia.youtube.replace('@', '')}`"
                 target="_blank"
                 icon
                 variant="flat"
+                size="small"
                 color="red"
-                size="large"
                 class="mb-1"
               >
-                <v-icon>mdi-youtube</v-icon>
+                <v-icon size="20">
+                  mdi-youtube
+                </v-icon>
               </v-btn>
-              <div class="text-caption">
+              <div class="text-caption text-truncate">
                 YouTube
               </div>
             </v-col>
-            <v-col cols="3" class="text-center">
+            <v-col v-if="paroquia?.site" cols="3" class="text-center">
               <v-btn
-                :href="`tel:${paroquia.telefone.replace(/\D/g, '')}`"
+                :href="paroquia.site"
+                target="_blank"
                 icon
                 variant="flat"
+                size="small"
                 color="primary"
-                size="large"
                 class="mb-1"
               >
-                <v-icon>mdi-phone</v-icon>
+                <v-icon size="20">
+                  mdi-web
+                </v-icon>
               </v-btn>
-              <div class="text-caption">
-                Ligar
+              <div class="text-caption text-truncate">
+                Site
               </div>
             </v-col>
           </v-row>
         </v-container>
       </v-sheet>
 
-      <!-- Tabs de Navegação -->
-      <v-tabs
-        v-model="activeTab"
-        bg-color="surface"
-        color="primary"
-        fixed-tabs
-        class="tabs-navigation"
-      >
-        <v-tab
-          v-for="item in navigationItems.slice(0, 4)"
-          :key="item.value"
-          :value="item.value"
-          :to="item.to"
-        >
-          <v-icon :icon="item.icon" size="20" class="mb-1" />
-          <span class="text-caption">{{ item.text }}</span>
-        </v-tab>
-      </v-tabs>
-
-      <!-- Page Content -->
-      <v-container class="pt-4 pb-20">
+      <!-- Page Content com padding para bottom nav -->
+      <v-container class="content-container pt-4 pb-24">
         <slot />
       </v-container>
     </v-main>
 
-    <!-- Bottom Navigation - Mobile -->
+    <!-- Bottom Navigation - Fixo e sempre visível -->
     <v-bottom-navigation
       v-model="activeTab"
       bg-color="surface"
       color="primary"
       grow
-      elevation="8"
-      class="d-md-none"
+      :elevation="8"
+      height="70"
+      class="bottom-nav-fixed"
+      mandatory
     >
       <v-btn
         v-for="item in navigationItems"
         :key="item.value"
         :value="item.value"
         :to="item.to"
+        height="100%"
       >
-        <v-icon>{{ item.icon }}</v-icon>
-        <span class="text-caption">{{ item.text }}</span>
+        <v-icon size="24">
+          {{ item.icon }}
+        </v-icon>
+        <span class="text-caption mt-1">{{ item.text }}</span>
       </v-btn>
     </v-bottom-navigation>
   </v-app>
 </template>
 
 <style scoped>
+.app-bar-paroquia {
+  position: fixed !important;
+  top: 0;
+  z-index: 1000;
+}
+
+.hero-section {
+  margin-top: 56px;
+}
+
 .hero-overlay {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.6) 100%);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%);
 }
 
 .quick-actions-bar {
   position: sticky;
-  top: 64px;
-  z-index: 2;
+  top: 56px;
+  z-index: 100;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.tabs-navigation {
-  position: sticky;
-  top: 64px;
-  z-index: 2;
+.content-container {
+  min-height: calc(100vh - 56px - 200px - 70px);
 }
 
-.app-bar-scrolled {
-  transition: all 0.3s ease;
+.bottom-nav-fixed {
+  position: fixed !important;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-/* Garantir espaço para bottom navigation no mobile */
-@media (max-width: 960px) {
-  .v-main {
-    padding-bottom: 56px !important;
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Safe area para dispositivos com notch */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .bottom-nav-fixed {
+    padding-bottom: env(safe-area-inset-bottom);
+    height: calc(70px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .content-container {
+    padding-bottom: calc(70px + env(safe-area-inset-bottom) + 1rem) !important;
+  }
+}
+
+/* Animação suave nos botões */
+.v-btn {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Desktop adjustments */
+@media (min-width: 960px) {
+  .bottom-nav-fixed {
+    display: none;
+  }
+
+  .content-container {
+    padding-bottom: 2rem !important;
   }
 }
 </style>

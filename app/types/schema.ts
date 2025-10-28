@@ -1,5 +1,5 @@
-/** * Generated TypeScript types for Directus Schema * Generated on: 2025-08-12T19:43:11.104Z */
-export interface Agenda {
+/** * Generated TypeScript types for Directus Schema * Generated on: 2025-10-28T19:01:35.751Z */
+export interface Clero {
   id: string;
   status: string;
   sort: number;
@@ -7,33 +7,18 @@ export interface Agenda {
   date_created: 'datetime';
   user_updated: string | DirectusUser;
   date_updated: 'datetime';
-  titulo: string;
-  descricao: string;
-  recorrente: boolean;
-  dia: number;
-  data_evento: 'datetime';
-  horario: 'datetime';
-  instituicao: number | Instituicao;
-  tipo_especial: string;
-  data_limite: 'datetime';
-}
-
-export interface Catolico {
-  id: string;
-  status: string;
-  sort: number;
-  user_created: string | DirectusUser;
-  date_created: 'datetime';
-  user_updated: string | DirectusUser;
-  date_updated: 'datetime';
+  slug: string;
   nome: string;
+  foto: string | DirectusFile;
+  hierarquia: string;
+  email: string;
   telefone: string;
-  sexo: string;
-  nascimento: 'datetime';
-  instituicao: number | Instituicao;
+  whatsapp: string;
+  instagram: string;
+  bio: string;
 }
 
-export interface Dizimista {
+export interface Diocese {
   id: string;
   status: string;
   sort: number;
@@ -41,25 +26,18 @@ export interface Dizimista {
   date_created: 'datetime';
   user_updated: string | DirectusUser;
   date_updated: 'datetime';
-  catolico: string | Catolico;
-  /** Use ponto em separação decimal */
-  valor_mensal: number;
-  instituicao: number | Instituicao;
-}
-
-export interface Instituicao {
-  id: number;
-  status: string;
-  sort: number;
-  user_created: string | DirectusUser;
-  date_created: 'datetime';
-  user_updated: string | DirectusUser;
-  date_updated: 'datetime';
+  slug: string;
   nome: string;
-  catolico: string[] | Catolico[];
+  descricao: string;
+  foto_capa: string | DirectusFile;
+  site: string;
+  instagram: string;
+  youtube: string;
+  whatsapp: string;
+  bispo: string | Clero;
 }
 
-export interface OfertaFinanceira {
+export interface Paroquia {
   id: string;
   status: string;
   sort: number;
@@ -67,14 +45,24 @@ export interface OfertaFinanceira {
   date_created: 'datetime';
   user_updated: string | DirectusUser;
   date_updated: 'datetime';
-  evento: string | Agenda;
-  valor: number;
-  data_entrada: 'datetime';
-  meio: string;
-  observacao: string;
+  slug: string;
+  nome: string;
+  cidade: string;
+  uf: string;
+  endereco: string;
+  cep: string;
+  capa: string | DirectusFile;
+  site: string;
+  instagram: string;
+  youtube: string;
+  whatsapp: string;
+  descricao: string;
+  diocese: string | Diocese;
+  email: string;
+  ano_criacao: string;
 }
 
-export interface PagamentoDizimo {
+export interface ParoquiaClero {
   id: string;
   status: string;
   sort: number;
@@ -82,15 +70,38 @@ export interface PagamentoDizimo {
   date_created: 'datetime';
   user_updated: string | DirectusUser;
   date_updated: 'datetime';
-  valor_pago: number;
-  dizimista: string | Dizimista;
-  meio: string;
-  data_pagamento: 'datetime';
+  paroquia: string | Paroquia;
+  clero: string | Clero;
+  cargo: string;
+  data_inicio: 'datetime';
+  data_fim: 'datetime';
+  observacoes: string;
+}
+
+export interface ParoquiaHorario {
+  id: string;
+  status: string;
+  sort: number;
+  user_created: string | DirectusUser;
+  date_created: 'datetime';
+  user_updated: string | DirectusUser;
+  date_updated: 'datetime';
+  paroquia: string | Paroquia;
+  tipo_servico: string;
+  dia_semana: Record<string, unknown>;
+  hora_inicio: 'datetime';
+  hora_fim: 'datetime';
+  periodo_data_inicio: 'datetime';
+  periodo_data_fim: 'datetime';
+  observacoes: string;
+  recorrente: boolean;
+  tipo_recorrencia: string;
+  /** Todo dia 08 do mês, em recorrência */
+  dia_do_mes: string;
 }
 
 export interface DirectusUser {
   id: string;
-  instituicao: number | Instituicao;
   first_name: string;
   last_name: string;
   email: string;
@@ -168,12 +179,12 @@ export interface DirectusRole {
 }
 
 export interface ApiCollections {
-  agenda: Agenda[];
-  catolico: Catolico[];
-  dizimista: Dizimista[];
-  instituicao: Instituicao[];
-  oferta_financeira: OfertaFinanceira[];
-  pagamento_dizimo: PagamentoDizimo[];
+  clero: Clero[];
+  diocese: Diocese[];
+  paroquia: Paroquia[];
+  paroquia_clero: ParoquiaClero[];
+  paroquia_horarios: ParoquiaHorario[];
   directus_users: DirectusUser[];
+  directus_files: DirectusFile[];
 }
 

@@ -162,7 +162,7 @@ watch(currentPage, () => {
               <v-text-field
                 v-model="searchQuery"
                 label="Buscar paróquia"
-                prepend-inner-icon="mdi-magnify"
+                prepend-inner-icon="fluent-color:search-24"
                 variant="outlined"
                 clearable
                 @input="filterParoquias"
@@ -196,7 +196,7 @@ watch(currentPage, () => {
                 @click="clearFilters"
               >
                 <v-icon start>
-                  mdi-filter-off
+                  fluent-color:filter-dismiss-24
                 </v-icon>
                 Limpar
               </v-btn>
@@ -218,10 +218,10 @@ watch(currentPage, () => {
           divided
         >
           <v-btn value="grid" size="small">
-            <v-icon>mdi-view-grid</v-icon>
+            <v-icon>fluent-color:grid-24</v-icon>
           </v-btn>
           <v-btn value="list" size="small">
-            <v-icon>mdi-view-list</v-icon>
+            <v-icon>fluent-color:text-bullet-list-square-24</v-icon>
           </v-btn>
         </v-btn-toggle>
       </div>
@@ -265,17 +265,17 @@ watch(currentPage, () => {
                       {{ paroquia.nome }}
                     </h3>
                     <div class="d-flex align-center mb-2">
-                      <v-icon icon="mdi-map-marker" size="16" class="mr-2 text-medium-emphasis" />
+                      <v-icon icon="fluent-color:location-24" size="16" class="mr-2 text-medium-emphasis" />
                       <span class="text-body-2 text-medium-emphasis">{{ paroquia.cidade }}, {{ paroquia.uf }}</span>
                     </div>
                     <div class="d-flex align-center mb-2">
-                      <v-icon icon="mdi-cross" size="16" class="mr-2 text-medium-emphasis" />
+                      <v-icon icon="fluent-color:building-multiple-24" size="16" class="mr-2 text-medium-emphasis" />
                       <span class="text-body-2 text-medium-emphasis">
                         {{ paroquia.totalCapelas }} capela{{ paroquia.totalCapelas !== 1 ? 's' : '' }}
                       </span>
                     </div>
                     <div v-if="paroquia.proximaMissa" class="d-flex align-center">
-                      <v-icon icon="mdi-clock" size="16" class="mr-2 text-medium-emphasis" />
+                      <v-icon icon="fluent-color:clock-24" size="16" class="mr-2 text-medium-emphasis" />
                       <span class="text-body-2 text-medium-emphasis">
                         Próxima missa: {{ paroquia.proximaMissa }}
                       </span>
@@ -285,7 +285,7 @@ watch(currentPage, () => {
                     <v-btn
                       color="primary"
                       variant="outlined"
-                      :to="`/paroquias/${paroquia.id}`"
+                      :to="`/p/${paroquia.id}`"
                     >
                       Ver Detalhes
                     </v-btn>
@@ -300,7 +300,7 @@ watch(currentPage, () => {
       <!-- No Results -->
       <v-row v-if="filteredParoquias.length === 0">
         <v-col cols="12" class="text-center py-12">
-          <v-icon icon="mdi-church" size="64" class="text-disabled mb-4" />
+          <v-icon icon="fluent-color:building-retail-24" size="64" class="text-disabled mb-4" />
           <h3 class="text-h5 mb-2 text-disabled">
             Nenhuma paróquia encontrada
           </h3>

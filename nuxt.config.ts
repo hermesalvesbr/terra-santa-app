@@ -28,14 +28,19 @@ export default defineNuxtConfig({
       },
     },
   },
-
+  // Server configuration
+  devServer: {
+    port: 3003,
+  },
   runtimeConfig: {
     // Variáveis privadas (apenas no servidor)
-    directusToken: '', // DIRECTUS_TOKEN
+    // Automaticamente lê de DIRECTUS_TOKEN do .env
+    directusToken: '',
 
     // Variáveis públicas (expostas no cliente)
     public: {
-      directusUrl: 'http://localhost:8055', // NUXT_PUBLIC_DIRECTUS_URL
+      // Automaticamente lê de NUXT_PUBLIC_DIRECTUS_URL do .env
+      directusUrl: 'http://localhost:8055',
       // Configurações de tema (podem ser sobrescritas por variáveis de ambiente)
       theme: {
         primary: '#1E3A8A', // Azul católico tradicional

@@ -22,7 +22,7 @@ defineProps<{
     >
       <template #placeholder>
         <div class="d-flex align-center justify-center fill-height">
-          <v-icon icon="mdi-church" size="48" color="grey-lighten-2" />
+          <v-icon icon="fluent-color:building-retail-24" size="48" color="grey-lighten-2" />
         </div>
       </template>
     </v-img>
@@ -32,13 +32,13 @@ defineProps<{
     </v-card-title>
 
     <v-card-subtitle>
-      <v-icon icon="mdi-map-marker" size="16" class="mr-1" />
+      <v-icon icon="fluent-color:location-24" size="16" class="mr-1" />
       {{ paroquia.cidade }}
     </v-card-subtitle>
 
     <v-card-text>
       <div class="d-flex align-center">
-        <v-icon icon="mdi-cross" size="16" class="mr-2 text-medium-emphasis" />
+        <v-icon icon="fluent-color:building-multiple-24" size="16" class="mr-2 text-medium-emphasis" />
         <span class="text-body-2 text-medium-emphasis">
           {{ paroquia.totalCapelas }} capela{{ paroquia.totalCapelas !== 1 ? 's' : '' }}
         </span>
@@ -50,7 +50,7 @@ defineProps<{
       <v-btn
         variant="text"
         color="primary"
-        :to="`/paroquias/${paroquia.id}`"
+        :to="`/p/${paroquia.id}`"
       >
         Ver Detalhes
       </v-btn>

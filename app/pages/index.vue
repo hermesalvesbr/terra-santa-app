@@ -26,28 +26,28 @@ const quickAccessCards = [
   {
     title: 'Missas Hoje',
     description: 'Horários de missas para hoje',
-    icon: 'mdi-clock',
+    icon: 'fluent-color:clock-24',
     color: 'accent',
     to: '/missas-hoje',
   },
   {
     title: 'Paróquias',
     description: 'Explore todas as paróquias',
-    icon: 'mdi-church',
+    icon: 'fluent-color:building-retail-24',
     color: 'primary',
     to: '/paroquias',
   },
   {
     title: 'Capelas',
     description: 'Encontre capelas próximas',
-    icon: 'mdi-cross',
+    icon: 'fluent-color:building-multiple-24',
     color: 'secondary',
     to: '/capelas',
   },
   {
     title: 'Comunidades',
     description: 'Grupos e comunidades',
-    icon: 'mdi-account-group',
+    icon: 'fluent-color:people-community-24',
     color: 'success',
     to: '/comunidades',
   },
@@ -126,7 +126,7 @@ function performSearch() {
                     class="text-none"
                   >
                     <v-icon start>
-                      mdi-clock
+                      fluent-color:clock-24
                     </v-icon>
                     Missas Hoje
                   </v-btn>
@@ -138,7 +138,7 @@ function performSearch() {
                     class="text-none"
                   >
                     <v-icon start>
-                      mdi-calendar
+                      fluent-color:calendar-24
                     </v-icon>
                     Ver Agenda
                   </v-btn>
@@ -150,7 +150,7 @@ function performSearch() {
                     class="text-none"
                   >
                     <v-icon start>
-                      mdi-magnify
+                      fluent-color:search-24
                     </v-icon>
                     Buscar
                   </v-btn>
@@ -177,7 +177,7 @@ function performSearch() {
                   <v-text-field
                     v-model="searchQuery"
                     label="Buscar paróquia, capela ou evento"
-                    prepend-inner-icon="mdi-magnify"
+                    prepend-inner-icon="fluent-color:search-24"
                     variant="outlined"
                     clearable
                     @keyup.enter="performSearch"
@@ -274,7 +274,7 @@ function performSearch() {
           >
             Ver Agenda Completa
             <v-icon end>
-              mdi-arrow-right
+              fluent-color:arrow-right-24
             </v-icon>
           </v-btn>
         </div>
@@ -304,7 +304,7 @@ function performSearch() {
           >
             Conheça a Diocese
             <v-icon end>
-              mdi-arrow-right
+              fluent-color:arrow-right-24
             </v-icon>
           </v-btn>
         </v-col>
@@ -317,7 +317,7 @@ function performSearch() {
           >
             <div class="text-center">
               <v-icon
-                icon="mdi-church"
+                icon="fluent-color:building-retail-24"
                 size="120"
                 color="primary"
                 class="mb-4"

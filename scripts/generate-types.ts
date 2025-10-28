@@ -1,19 +1,15 @@
+import { exec } from 'node:child_process'
 import path from 'node:path'
 import process from 'node:process'
+import { promisify } from 'node:util'
+
+const execAsync = promisify(exec)
 
 // Declaração global para o Bun no topo do arquivo
 declare global {
-  interface BunSpawnOptions {
-    cmd: string[]
-    stdout?: 'inherit' | 'pipe'
-    stderr?: 'inherit' | 'pipe'
-    onExit?: (proc: any, exitCode: any) => void
-  }
-
   const Bun: {
     env: Record<string, string | undefined>
     file: (path: string) => { text: () => Promise<string> }
-    spawn: (options: BunSpawnOptions) => any
   }
 }
 
@@ -50,29 +46,18 @@ try {
       process.exit(1)
     }
 
-    const _bunProcess: any = Bun.spawn({
-      cmd: [
-        'bunx',
-        'directus-typeforge',
-        '--host',
-        DIRECTUS_HOST,
-        '--token',
-        ADMIN_TOKEN,
-        '--outFile',
-        outputFile,
-      ],
-      stdout: 'inherit',
-      stderr: 'inherit',
-      onExit(_proc: any, exitCode: any) {
-        if (exitCode === 0) {
-          console.log('Types gerados com sucesso em:', outputFile)
-        }
-        else {
-          console.error('Erro ao gerar os types. Código de saída:', exitCode)
-          process.exit(exitCode)
-        }
-      },
-    })
+    // Escapar o token para uso seguro na linha de comando
+    const escapedToken = ADMIN_TOKEN.replace(/"/g, '\\"')
+    const command = `bunx directus-typeforge --host="${DIRECTUS_HOST}" --token="${escapedToken}" --outFile="${outputFile}"`
+
+    execAsync(command)
+      .then(() => {
+        console.log('Types gerados com sucesso em:', outputFile)
+      })
+      .catch((error: any) => {
+        console.error('Erro ao gerar os types:', error.message)
+        process.exit(1)
+      })
   }).catch((error: any) => {
     console.error('Erro ao ler o conteúdo do arquivo .env:', error)
     process.exit(1)
