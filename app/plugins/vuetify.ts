@@ -310,11 +310,19 @@ export default defineNuxtPlugin((app) => {
       },
     },
     icons: {
-      defaultSet: 'mdi', // 'fluentColor'
+      // Mantém compatibilidade total com MDI (fonte) e habilita Iconify como set adicional.
+      // Para usar Iconify, use strings com prefixo de coleção (ex.: 'flat-color-icons:linux').
+      defaultSet: 'mdi',
       sets: {
-        fluentColor: {
-          component: Icon as any,
+        iconify: {
+          component: Icon as any, // SSR-friendly e aceita width/height
         },
+      },
+      aliases: {
+        // Exemplos solicitados
+        fcLinux: 'flat-color-icons:linux',
+        suRocket: 'streamline-ultimate:rocket-launch',
+        flCalendar: 'fluent-color:calendar-20-regular',
       },
     },
     defaults: {
