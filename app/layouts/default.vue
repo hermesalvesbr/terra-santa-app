@@ -1,49 +1,72 @@
 <script setup lang="ts">
-import { useTheme } from 'vuetify'
+// Bottom Navigation - varia de acordo com o tipo de entidade
+const route = useRoute()
+const navigationValue = ref(0)
 
-// Theme management
-const theme = useTheme()
-const isDark = computed(() => theme.current.value.dark)
+// Detecta o tipo de entidade baseado na rota
+const entityType = computed(() => {
+  const path = route.path
+  if (path.startsWith('/d/'))
+    return 'diocese'
+  if (path.startsWith('/p/'))
+    return 'paroquia'
+  // Capela e comunidade seguem padrão /[paroquia]/[capela] e /[paroquia]/[capela]/[comunidade]
+  const segments = path.split('/').filter(Boolean)
+  if (segments.length >= 3)
+    return 'comunidade'
+  if (segments.length === 2)
+    return 'capela'
+  return 'geral'
+})
 
-function toggleTheme() {
-  theme.global.name.value = isDark.value ? 'cidadeTema' : 'cidadeTemaEscuro'
-}
+// Botões do bottom navigation (4 botões + logo central)
+const navigationItems = computed(() => {
+  const type = entityType.value
 
-// Navigation
-const drawer = ref(false)
+  if (type === 'diocese') {
+    return [
+      { icon: 'mdi-calendar', to: '/agenda', label: 'Agenda' },
+      { icon: 'mdi-map-marker', to: '/mapa', label: 'Mapa' },
+      { icon: 'mdi-newspaper', to: '/noticias', label: 'Notícias' },
+      { icon: 'mdi-account-group', to: '/time', label: 'Time' },
+    ]
+  }
 
-const navigationItems = [
-  {
-    title: 'Início',
-    to: '/',
-    icon: 'mdi-home',
-  },
-  {
-    title: 'Diocese',
-    to: '/diocese',
-    icon: 'mdi-church',
-  },
-  {
-    title: 'Paróquias',
-    to: '/paroquias',
-    icon: 'mdi-account-group',
-  },
-  {
-    title: 'Capelas',
-    to: '/capelas',
-    icon: 'mdi-cross',
-  },
-  {
-    title: 'Agenda',
-    to: '/agenda',
-    icon: 'mdi-calendar',
-  },
-  {
-    title: 'Buscar',
-    to: '/buscar',
-    icon: 'mdi-magnify',
-  },
-]
+  if (type === 'paroquia') {
+    return [
+      { icon: 'mdi-calendar', to: '/agenda', label: 'Agenda' },
+      { icon: 'mdi-map-marker', to: '/mapa', label: 'Mapa' },
+      { icon: 'mdi-newspaper', to: '/noticias', label: 'Notícias' },
+      { icon: 'mdi-account-group', to: '/time', label: 'Time' },
+    ]
+  }
+
+  if (type === 'capela') {
+    return [
+      { icon: 'mdi-calendar', to: '/agenda', label: 'Agenda' },
+      { icon: 'mdi-map-marker', to: '/mapa', label: 'Mapa' },
+      { icon: 'mdi-newspaper', to: '/noticias', label: 'Notícias' },
+      { icon: 'mdi-account-group', to: '/time', label: 'Time' },
+    ]
+  }
+
+  if (type === 'comunidade') {
+    return [
+      { icon: 'mdi-calendar', to: '/agenda', label: 'Agenda' },
+      { icon: 'mdi-map-marker', to: '/mapa', label: 'Mapa' },
+      { icon: 'mdi-newspaper', to: '/noticias', label: 'Notícias' },
+      { icon: 'mdi-account-group', to: '/time', label: 'Time' },
+    ]
+  }
+
+  // Navegação geral (home, busca, etc)
+  return [
+    { icon: 'mdi-calendar', to: '/agenda', label: 'Agenda' },
+    { icon: 'mdi-map-marker', to: '/mapa', label: 'Mapa' },
+    { icon: 'mdi-newspaper', to: '/noticias', label: 'Notícias' },
+    { icon: 'mdi-account-group', to: '/time', label: 'Time' },
+  ]
+})
 
 // SEO
 useHead({
@@ -57,85 +80,84 @@ useHead({
 
 <template>
   <v-app>
-    <!-- App Bar -->
-    <v-app-bar
-      :elevation="2"
-      app
-      color="primary"
-      dark
-    >
-      <v-app-bar-nav-icon
-        class="d-lg-none"
-        @click="drawer = !drawer"
-      />
-
-      <v-toolbar-title class="text-h6 font-weight-bold">
-        <NuxtLink to="/" class="text-decoration-none text-white">
-          Terra Santa
-        </NuxtLink>
-      </v-toolbar-title>
-
-      <v-spacer />
-
-      <!-- Desktop Navigation -->
-      <v-btn
-        v-for="item in navigationItems"
-        :key="item.title"
-        :to="item.to"
-        variant="text"
-        class="d-none d-lg-flex"
+    <v-layout class="flex-column">
+      <!-- Header com nome à esquerda, buscar e visualizar à direita -->
+      <v-app-bar
+        app
+        elevation="0"
+        color="primary"
+        density="comfortable"
+        class="px-4"
       >
-        <v-icon :icon="item.icon" start />
-        {{ item.title }}
-      </v-btn>
+        <v-app-bar-title>
+          <NuxtLink to="/" class="text-decoration-none text-white">
+            TerraSanta.app
+          </NuxtLink>
+        </v-app-bar-title>
 
-      <!-- Theme Toggle -->
-      <v-btn
-        icon
-        class="ml-2"
-        @click="toggleTheme"
+        <v-spacer />
+
+        <v-btn
+          icon="mdi-magnify"
+          variant="text"
+          color="white"
+        />
+
+        <v-btn
+          icon="mdi-account-circle"
+          variant="text"
+          color="white"
+        />
+      </v-app-bar>
+
+      <!-- Conteúdo Principal -->
+      <v-main class="pb-20">
+        <slot />
+      </v-main>
+
+      <!-- Bottom Navigation com 4 botões + logo central -->
+      <v-bottom-navigation
+        v-model="navigationValue"
+        bg-color="surface"
+        elevation="8"
+        grow
+        app
+        class="border-t position-fixed bottom-0 start-0 end-0"
       >
-        <v-icon>
-          {{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}
-        </v-icon>
-      </v-btn>
-    </v-app-bar>
-
-    <!-- Navigation Drawer (Mobile) -->
-    <v-navigation-drawer
-      v-model="drawer"
-      temporary
-      app
-      class="d-lg-none"
-    >
-      <v-list nav dense>
-        <v-list-item
-          v-for="item in navigationItems"
-          :key="item.title"
+        <!-- Primeiros 2 botões -->
+        <v-btn
+          v-for="(item, index) in navigationItems.slice(0, 2)"
+          :key="`left-${index}`"
           :to="item.to"
-          @click="drawer = false"
+          :value="index"
         >
-          <template #prepend>
-            <v-icon :icon="item.icon" />
-          </template>
-          <v-list-item-title>{{ item.title }}</v-list-item-title>
-        </v-list-item>
-      </v-list>
-    </v-navigation-drawer>
+          <v-icon>{{ item.icon }}</v-icon>
+          <span class="text-caption">{{ item.label }}</span>
+        </v-btn>
 
-    <!-- Main Content -->
-    <v-main>
-      <slot />
-    </v-main>
+        <!-- Logo central (não navegável, apenas visual) -->
+        <v-btn disabled class="elevation-0">
+          <v-avatar
+            color="primary"
+            size="40"
+          >
+            <v-icon color="white" size="24">
+              mdi-hands-pray
+            </v-icon>
+          </v-avatar>
+        </v-btn>
 
-    <!-- Footer -->
-    <v-footer
-      color="surface"
-      class="text-center pa-4"
-    >
-      <div class="text-body-2">
-        © {{ new Date().getFullYear() }} Terra Santa - Catálogo Diocesano Digital
-      </div>
-    </v-footer>
+        <!-- Últimos 2 botões -->
+        <v-btn
+          v-for="(item, index) in navigationItems.slice(2, 4)"
+          :key="`right-${index}`"
+          :to="item.to"
+          :value="index + 2"
+        >
+          <v-icon>{{ item.icon }}</v-icon>
+          <span class="text-caption">{{ item.label }}</span>
+        </v-btn>
+      </v-bottom-navigation>
+    </v-layout>
   </v-app>
 </template>

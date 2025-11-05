@@ -79,10 +79,31 @@ function processQueryParams(query: Record<string, any>, collection: string) {
   let hasCidade = false
 
   for (const [key, value] of Object.entries(query)) {
+    if (key === 'filter') {
+      let parsed: Record<string, any> | null = null
+      if (typeof value === 'string') {
+        try {
+          parsed = JSON.parse(value)
+        }
+        catch {
+          parsed = null
+        }
+      }
+      else if (typeof value === 'object' && value !== null) {
+        parsed = value as Record<string, any>
+      }
+
+      if (parsed) {
+        Object.assign(filters, parsed)
+        if (Object.prototype.hasOwnProperty.call(parsed, 'cidade'))
+          hasCidade = true
+      }
+
+      continue
+    }
+
     // Parâmetros especiais são processados separadamente
     if (specialParams.includes(key)) {
-      if (key === 'cidade')
-        hasCidade = true
       continue
     }
 

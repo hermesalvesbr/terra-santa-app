@@ -1,352 +1,223 @@
 <script setup lang="ts">
-// SEO
+import type { Diocese } from '~/types/schema'
+
 useHead({
-  title: 'Início',
+  title: 'Encontre sua Diocese',
   meta: [
-    { name: 'description', content: 'Terra Santa - Catálogo diocesano navegável e confiável. Encontre horários de missas, eventos e informações das paróquias e capelas.' },
-    { property: 'og:title', content: 'Terra Santa - Catálogo Diocesano Digital' },
-    { property: 'og:description', content: 'Encontre horários de missas, eventos e informações das paróquias e capelas da nossa diocese' },
+    { name: 'description', content: 'Encontre sua diocese e descubra as paróquias, eventos e comunidades católicas próximas a você.' },
   ],
 })
 
-// Search functionality
+// Buscar dioceses
+const {
+  data: diocesesResponse,
+  pending: diocesesPending,
+  error: diocesesError,
+  refresh: refreshDioceses,
+} = await useFetch<{ data: Diocese[] }>('/api/directus/diocese', {
+  query: {
+    limit: -1,
+    sort: 'nome',
+    fields: ['id', 'nome', 'slug', 'descricao', 'foto_capa.*', 'logo.*', 'site', 'instagram', 'youtube', 'whatsapp'].join(','),
+    filter: JSON.stringify({
+      status: { _eq: 'published' },
+    }),
+  },
+})
+
+const dioceses = computed(() => diocesesResponse.value?.data ?? [])
+
+// Busca/filtro
 const searchQuery = ref('')
-const selectedCity = ref('')
+const filteredDioceses = computed(() => {
+  if (!searchQuery.value.trim())
+    return dioceses.value
 
-// Mock data - será substituído por dados reais do Directus
-const cities = [
-  'Todas as cidades',
-  'São Paulo',
-  'Rio de Janeiro',
-  'Belo Horizonte',
-  'Salvador',
-]
-
-const quickAccessCards = [
-  {
-    title: 'Missas Hoje',
-    description: 'Horários de missas para hoje',
-    icon: 'fluent-color:clock-24',
-    color: 'accent',
-    to: '/missas-hoje',
-  },
-  {
-    title: 'Paróquias',
-    description: 'Explore todas as paróquias',
-    icon: 'fluent-color:building-retail-24',
-    color: 'primary',
-    to: '/paroquias',
-  },
-  {
-    title: 'Capelas',
-    description: 'Encontre capelas próximas',
-    icon: 'fluent-color:building-multiple-24',
-    color: 'secondary',
-    to: '/capelas',
-  },
-  {
-    title: 'Comunidades',
-    description: 'Grupos e comunidades',
-    icon: 'fluent-color:people-community-24',
-    color: 'success',
-    to: '/comunidades',
-  },
-]
-
-// Mock events data
-const todaysEvents = ref([
-  {
-    id: 1,
-    title: 'Missa Dominical',
-    time: '07:00',
-    location: 'Paróquia São José',
-    type: 'missa',
-  },
-  {
-    id: 2,
-    title: 'Terço dos Homens',
-    time: '19:30',
-    location: 'Capela Nossa Senhora',
-    type: 'oração',
-  },
-  {
-    id: 3,
-    title: 'Catequese Infantil',
-    time: '14:00',
-    location: 'Paróquia Santa Maria',
-    type: 'catequese',
-  },
-])
-
-// Functions
-function performSearch() {
-  navigateTo({
-    path: '/buscar',
-    query: {
-      q: searchQuery.value,
-      cidade: selectedCity.value,
-    },
+  const query = searchQuery.value.toLowerCase().trim()
+  return dioceses.value.filter((diocese) => {
+    return diocese.nome.toLowerCase().includes(query)
+      || diocese.descricao?.toLowerCase().includes(query)
   })
-}
+})
 </script>
 
 <template>
-  <div>
+  <div class="home-page">
     <!-- Hero Section -->
-    <v-container fluid class="pa-0">
-      <v-row no-gutters>
-        <v-col cols="12">
-          <v-sheet
-            :height="500"
-            color="primary"
-            class="d-flex align-center justify-center position-relative"
-          >
-            <!-- Background Pattern -->
-            <div class="hero-pattern" />
-
-            <v-container class="text-center position-relative">
-              <div class="text-white">
-                <h1 class="text-h2 text-lg-h1 font-weight-bold mb-4">
-                  Terra Santa
-                </h1>
-                <p class="text-h5 text-lg-h4 mb-6 font-weight-light">
-                  Catálogo Diocesano Digital
-                </p>
-                <p class="text-body-1 text-lg-h6 mb-8 mx-auto" style="max-width: 600px;">
-                  Encontre horários de missas, eventos e informações das paróquias e capelas da nossa diocese
-                </p>
-
-                <!-- Quick Actions -->
-                <div class="d-flex flex-wrap justify-center gap-3">
-                  <v-btn
-                    size="large"
-                    color="accent"
-                    variant="flat"
-                    to="/missas-hoje"
-                    class="text-none"
-                  >
-                    <v-icon start>
-                      fluent-color:clock-24
-                    </v-icon>
-                    Missas Hoje
-                  </v-btn>
-                  <v-btn
-                    size="large"
-                    color="secondary"
-                    variant="flat"
-                    to="/agenda"
-                    class="text-none"
-                  >
-                    <v-icon start>
-                      fluent-color:calendar-24
-                    </v-icon>
-                    Ver Agenda
-                  </v-btn>
-                  <v-btn
-                    size="large"
-                    variant="outlined"
-                    color="white"
-                    to="/buscar"
-                    class="text-none"
-                  >
-                    <v-icon start>
-                      fluent-color:search-24
-                    </v-icon>
-                    Buscar
-                  </v-btn>
-                </div>
-              </div>
-            </v-container>
-          </v-sheet>
-        </v-col>
-      </v-row>
-    </v-container>
-
-    <!-- Quick Search Section -->
-    <v-container class="py-12">
-      <v-row>
-        <v-col cols="12" md="8" offset-md="2">
-          <v-card elevation="4" rounded="xl">
-            <v-card-text class="pa-8">
-              <h2 class="text-h4 text-center mb-6 text-primary">
-                Encontre Rapidamente
-              </h2>
-
-              <v-row>
-                <v-col cols="12" md="6">
-                  <v-text-field
-                    v-model="searchQuery"
-                    label="Buscar paróquia, capela ou evento"
-                    prepend-inner-icon="fluent-color:search-24"
-                    variant="outlined"
-                    clearable
-                    @keyup.enter="performSearch"
-                  />
-                </v-col>
-                <v-col cols="12" md="3">
-                  <v-select
-                    v-model="selectedCity"
-                    :items="cities"
-                    label="Cidade"
-                    variant="outlined"
-                    clearable
-                  />
-                </v-col>
-                <v-col cols="12" md="3">
-                  <v-btn
-                    block
-                    size="large"
-                    color="primary"
-                    @click="performSearch"
-                  >
-                    Buscar
-                  </v-btn>
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-    </v-container>
-
-    <!-- Quick Access Cards -->
-    <v-container class="py-8">
-      <h2 class="text-h4 text-center mb-8 text-primary">
-        Acesso Rápido
-      </h2>
-
-      <v-row>
-        <v-col
-          v-for="card in quickAccessCards"
-          :key="card.title"
-          cols="12"
-          sm="6"
-          md="3"
-        >
-          <v-card
-            :to="card.to"
-            class="text-center pa-4 h-100"
-            elevation="2"
-            hover
-          >
-            <v-icon
-              :icon="card.icon"
-              size="48"
-              :color="card.color"
-              class="mb-4"
-            />
-            <h3 class="text-h6 mb-2">
-              {{ card.title }}
-            </h3>
-            <p class="text-body-2 text-medium-emphasis">
-              {{ card.description }}
-            </p>
-          </v-card>
-        </v-col>
-      </v-row>
-    </v-container>
-
-    <!-- Today's Events Section -->
-    <v-container fluid class="py-12" style="background-color: rgb(var(--v-theme-surface-variant));">
-      <v-container>
-        <h2 class="text-h4 text-center mb-8 text-primary">
-          Eventos de Hoje
-        </h2>
-
-        <v-row>
-          <v-col
-            v-for="event in todaysEvents"
-            :key="event.id"
-            cols="12"
-            md="6"
-            lg="4"
-          >
-            <EventCard :event="event" />
-          </v-col>
-        </v-row>
-
-        <div class="text-center mt-8">
-          <v-btn
-            to="/agenda"
-            variant="outlined"
-            color="primary"
-            size="large"
-          >
-            Ver Agenda Completa
-            <v-icon end>
-              fluent-color:arrow-right-24
-            </v-icon>
-          </v-btn>
+    <v-sheet
+      class="hero-section"
+      elevation="0"
+    >
+      <v-container class="py-8">
+        <div class="text-center text-white">
+          <v-img
+            src="/icone-terra-santa-app.png"
+            width="64"
+            height="64"
+            class="mb-4 mx-auto"
+          />
+          <h1 class="text-h4 font-weight-bold mb-3">
+            TerraSanta.app
+          </h1>
         </div>
       </v-container>
+    </v-sheet>
+
+    <!-- Search Bar -->
+    <v-container class="search-container">
+      <v-card
+        elevation="8"
+        rounded="xl"
+        class="mx-auto search-card"
+      >
+        <v-text-field
+          v-model="searchQuery"
+          prepend-inner-icon="mdi-magnify"
+          placeholder="Buscar diocese..."
+          variant="solo-filled"
+          hide-details
+          clearable
+          density="comfortable"
+        />
+      </v-card>
     </v-container>
 
-    <!-- Diocese Info Section -->
-    <v-container class="py-12">
-      <v-row align="center">
-        <v-col cols="12" md="6">
-          <h2 class="text-h4 mb-4 text-primary">
-            Nossa Diocese
-          </h2>
-          <p class="text-body-1 mb-4">
-            A Diocese compreende uma comunidade de fiéis unidos pela fé e pela tradição católica,
-            servindo às necessidades espirituais e pastorais de nossa região.
-          </p>
-          <p class="text-body-1 mb-6">
-            Aqui você encontra informações completas sobre todas as paróquias, capelas,
-            comunidades e eventos que acontecem em nossa diocese.
-          </p>
-          <v-btn
-            to="/diocese"
-            color="primary"
-            size="large"
-            variant="flat"
-          >
-            Conheça a Diocese
-            <v-icon end>
-              fluent-color:arrow-right-24
-            </v-icon>
-          </v-btn>
-        </v-col>
-        <v-col cols="12" md="6">
-          <v-card
-            elevation="2"
-            color="surface-variant"
-            class="rounded-lg d-flex align-center justify-center"
-            height="400"
-          >
-            <div class="text-center">
-              <v-icon
-                icon="fluent-color:building-retail-24"
-                size="120"
-                color="primary"
-                class="mb-4"
-              />
-              <h3 class="text-h5 text-primary">
-                Nossa Diocese
-              </h3>
-              <p class="text-body-2 text-medium-emphasis">
-                Comunidade de fé e tradição
-              </p>
-            </div>
-          </v-card>
-        </v-col>
-      </v-row>
+    <!-- Main Content -->
+    <v-container class="py-4">
+      <!-- Loading State -->
+      <div v-if="diocesesPending" class="d-flex flex-column gap-4">
+        <v-skeleton-loader
+          v-for="index in 3"
+          :key="`skeleton-${index}`"
+          type="card"
+          class="rounded-xl"
+        />
+      </div>
+
+      <!-- Error State -->
+      <v-card
+        v-else-if="diocesesError"
+        elevation="2"
+        rounded="xl"
+        class="pa-6 text-center"
+      >
+        <v-icon
+          icon="mdi-alert-circle-outline"
+          size="64"
+          color="error"
+          class="mb-4"
+        />
+        <h3 class="text-h6 mb-3">
+          Não foi possível carregar as dioceses
+        </h3>
+        <p class="text-body-2 text-medium-emphasis mb-4">
+          Verifique sua conexão e tente novamente
+        </p>
+        <v-btn
+          color="primary"
+          variant="tonal"
+          size="large"
+          @click="refreshDioceses"
+        >
+          <v-icon start icon="mdi-refresh" />
+          Tentar Novamente
+        </v-btn>
+      </v-card>
+
+      <!-- Empty State -->
+      <v-card
+        v-else-if="filteredDioceses.length === 0 && !searchQuery"
+        elevation="2"
+        rounded="xl"
+        class="pa-6 text-center"
+      >
+        <v-icon
+          icon="mdi-church-outline"
+          size="64"
+          color="grey"
+          class="mb-4"
+        />
+        <h3 class="text-h6 mb-2">
+          Nenhuma diocese disponível
+        </h3>
+        <p class="text-body-2 text-medium-emphasis">
+          Novas dioceses serão adicionadas em breve
+        </p>
+      </v-card>
+
+      <!-- No Search Results -->
+      <v-card
+        v-else-if="filteredDioceses.length === 0 && searchQuery"
+        elevation="2"
+        rounded="xl"
+        class="pa-6 text-center"
+      >
+        <v-icon
+          icon="mdi-magnify"
+          size="64"
+          color="grey"
+          class="mb-4"
+        />
+        <h3 class="text-h6 mb-2">
+          Nenhum resultado encontrado
+        </h3>
+        <p class="text-body-2 text-medium-emphasis">
+          Tente buscar com outros termos
+        </p>
+      </v-card>
+
+      <!-- Diocese Cards Grid -->
+      <div v-else class="diocese-grid">
+        <DiocesesCard
+          v-for="diocese in filteredDioceses"
+          :key="diocese.id"
+          :diocese="diocese"
+          variant="grid"
+        />
+      </div>
     </v-container>
   </div>
 </template>
 
 <style scoped>
-.hero-pattern {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image:
-    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-  background-size: 100px 100px;
-  opacity: 0.3;
+.home-page {
+  min-height: 100vh;
+  background: rgb(var(--v-theme-surface));
+}
+
+.hero-section {
+  background: url('/background-hero-section.png') top center / cover no-repeat;
+}
+
+.search-container {
+  margin-top: -28px;
+  position: relative;
+  z-index: 10;
+}
+
+.search-card {
+  max-width: 600px;
+}
+
+.diocese-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+/* Responsivo para tablets */
+@media (min-width: 600px) {
+  .diocese-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Responsivo para desktop */
+@media (min-width: 960px) {
+  .diocese-grid {
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
 }
 </style>

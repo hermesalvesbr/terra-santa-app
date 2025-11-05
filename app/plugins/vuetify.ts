@@ -33,9 +33,9 @@ function createCidadeTema(): ThemeDefinition {
   const cfg = useRuntimeConfig().public as any
 
   const light = {
-    primary: cfg.theme?.primary || '#1E3A8A',
-    secondary: cfg.theme?.secondary || '#2563EB',
-    accent: cfg.theme?.accent || '#FBBF24',
+    primary: cfg.theme?.primary || '#3AB5F2',
+    secondary: cfg.theme?.secondary || '#F6C46F',
+    accent: cfg.theme?.accent || '#F29A2E',
     background: cfg.theme?.background || '#FFFFFF',
     surface: cfg.theme?.surface || '#FAFAFA',
     surfaceVariant: cfg.theme?.surfaceVariant || '#F5F5F5',

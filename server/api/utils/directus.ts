@@ -3,7 +3,7 @@ import process from 'node:process'
 import { createDirectus, rest, staticToken } from '@directus/sdk'
 
 // Leitura das variáveis de ambiente
-const url = process.env.NUXT_PUBLIC_DIRECTUS_URL || 'https://capela.softagon.app'
+const url = process.env.NUXT_PUBLIC_DIRECTUS_URL || ''
 const token = process.env.DIRECTUS_TOKEN || ''
 
 if (!token) {

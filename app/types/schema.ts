@@ -1,4 +1,4 @@
-/** * Generated TypeScript types for Directus Schema * Generated on: 2025-10-28T19:01:35.751Z */
+/** * Generated TypeScript types for Directus Schema * Generated on: 2025-11-05T13:46:22.122Z */
 export interface Clero {
   id: string;
   status: string;
@@ -35,6 +35,7 @@ export interface Diocese {
   youtube: string;
   whatsapp: string;
   bispo: string | Clero;
+  logo: string | DirectusFile;
 }
 
 export interface Paroquia {
@@ -60,6 +61,7 @@ export interface Paroquia {
   diocese: string | Diocese;
   email: string;
   ano_criacao: string;
+  logo: string | DirectusFile;
 }
 
 export interface ParoquiaClero {

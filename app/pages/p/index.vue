@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// SEO
+import type { Paroquia } from '~/types/schema'
+
 useHead({
   title: 'Paróquias',
   meta: [
@@ -7,153 +8,228 @@ useHead({
   ],
 })
 
-// Reactive data
+const ITEMS_PER_PAGE = 12
+
 const searchQuery = ref('')
-const selectedCity = ref('')
-const selectedRegion = ref('')
-const viewMode = ref('grid')
+const selectedCity = ref<string | null>(null)
+const selectedDiocese = ref<string | null>(null)
+const viewMode = ref<'grid' | 'list'>('grid')
 const currentPage = ref(1)
-const itemsPerPage = 12
 
-// Mock data - será substituído por dados reais do Directus
-const paroquias = ref([
+const { data: paroquiasResponse, pending, error, refresh } = await useFetch<{ data: Paroquia[] }>(
+  '/api/directus/paroquia',
   {
-    id: 1,
-    nome: 'Paróquia São José',
-    cidade: 'São Paulo',
-    uf: 'SP',
-    regiao: 'Centro',
-    fotoCapa: '/api/placeholder/300/200',
-    totalCapelas: 5,
-    proximaMissa: 'Hoje, 18:00',
+    query: {
+      limit: -1,
+      sort: 'nome',
+      fields: [
+        'id',
+        'slug',
+        'nome',
+        'cidade',
+        'uf',
+        'descricao',
+        'instagram',
+        'whatsapp',
+        'site',
+        'capa.*',
+        'diocese.id',
+        'diocese.nome',
+      ].join(','),
+      filter: JSON.stringify({
+        status: { _eq: 'published' },
+      }),
+    },
   },
-  {
-    id: 2,
-    nome: 'Paróquia Santa Maria',
-    cidade: 'São Paulo',
-    uf: 'SP',
-    regiao: 'Zona Norte',
-    fotoCapa: '/api/placeholder/300/200',
-    totalCapelas: 3,
-    proximaMissa: 'Amanhã, 07:00',
-  },
-  {
-    id: 3,
-    nome: 'Paróquia São Pedro',
-    cidade: 'Guarulhos',
-    uf: 'SP',
-    regiao: 'Grande São Paulo',
-    fotoCapa: '/api/placeholder/300/200',
-    totalCapelas: 7,
-    proximaMissa: 'Hoje, 19:30',
-  },
-  {
-    id: 4,
-    nome: 'Paróquia Santa Rita',
-    cidade: 'São Paulo',
-    uf: 'SP',
-    regiao: 'Zona Sul',
-    fotoCapa: '/api/placeholder/300/200',
-    totalCapelas: 4,
-    proximaMissa: 'Domingo, 08:00',
-  },
-  {
-    id: 5,
-    nome: 'Paróquia São João',
-    cidade: 'Osasco',
-    uf: 'SP',
-    regiao: 'Grande São Paulo',
-    fotoCapa: '/api/placeholder/300/200',
-    totalCapelas: 6,
-    proximaMissa: 'Hoje, 17:00',
-  },
-  {
-    id: 6,
-    nome: 'Paróquia Nossa Senhora',
-    cidade: 'São Paulo',
-    uf: 'SP',
-    regiao: 'Zona Leste',
-    fotoCapa: '/api/placeholder/300/200',
-    totalCapelas: 8,
-    proximaMissa: 'Amanhã, 06:30',
-  },
-])
+)
 
-const filteredParoquias = ref([...paroquias.value])
+const allParoquias = computed<Paroquia[]>(() => paroquiasResponse.value?.data ?? [])
 
-// Computed
+function normalizeValue(value: string | null | undefined) {
+  return (value || '')
+    .toString()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036F]/g, '')
+    .toLowerCase()
+}
+
+function extractDioceseName(paroquia: Paroquia) {
+  if (paroquia.diocese && typeof paroquia.diocese === 'object' && 'nome' in paroquia.diocese)
+    return paroquia.diocese.nome as string
+  return ''
+}
+
+interface PreparedParoquia {
+  paroquia: Paroquia
+  dioceseName: string
+  cityNormalized: string
+  dioceseNormalized: string
+  searchCache: string
+}
+
+const preparedParoquias = computed<PreparedParoquia[]>(() => {
+  return allParoquias.value.map((paroquia) => {
+    const dioceseName = extractDioceseName(paroquia)
+    const cityNormalized = normalizeValue(paroquia.cidade)
+    const dioceseNormalized = normalizeValue(dioceseName)
+    const searchCache = normalizeValue([
+      paroquia.nome,
+      paroquia.descricao,
+      paroquia.cidade,
+      dioceseName,
+    ]
+      .filter(Boolean)
+      .join(' '))
+
+    return {
+      paroquia,
+      dioceseName,
+      cityNormalized,
+      dioceseNormalized,
+      searchCache,
+    }
+  })
+})
+
+const totalParoquias = computed(() => allParoquias.value.length)
+
 const cities = computed(() => {
-  const uniqueCities = [...new Set(paroquias.value.map(p => p.cidade))]
-  return uniqueCities.sort()
+  const set = new Set<string>()
+  for (const entry of preparedParoquias.value) {
+    if (entry.paroquia.cidade)
+      set.add(entry.paroquia.cidade)
+  }
+  return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'))
 })
 
-const regions = computed(() => {
-  const uniqueRegions = [...new Set(paroquias.value.map(p => p.regiao))]
-  return uniqueRegions.sort()
+const dioceses = computed(() => {
+  const set = new Set<string>()
+  for (const entry of preparedParoquias.value) {
+    if (entry.dioceseName)
+      set.add(entry.dioceseName)
+  }
+  return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'))
 })
 
-const totalPages = computed(() => {
-  return Math.ceil(filteredParoquias.value.length / itemsPerPage)
+const filteredParoquias = computed(() => {
+  const normalizedCity = normalizeValue(selectedCity.value)
+  const normalizedDiocese = normalizeValue(selectedDiocese.value)
+  const normalizedSearch = normalizeValue(searchQuery.value)
+
+  return preparedParoquias.value
+    .filter((entry) => {
+      if (normalizedCity && entry.cityNormalized !== normalizedCity)
+        return false
+
+      if (normalizedDiocese && entry.dioceseNormalized !== normalizedDiocese)
+        return false
+
+      if (normalizedSearch && !entry.searchCache.includes(normalizedSearch))
+        return false
+
+      return true
+    })
+    .map(entry => entry.paroquia)
 })
+
+watch([searchQuery, selectedCity, selectedDiocese], () => {
+  currentPage.value = 1
+})
+
+watch(
+  () => filteredParoquias.value.length,
+  (length) => {
+    const maxPage = Math.max(1, Math.ceil(length / ITEMS_PER_PAGE))
+    if (currentPage.value > maxPage)
+      currentPage.value = maxPage
+  },
+)
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredParoquias.value.length / ITEMS_PER_PAGE)))
 
 const paginatedParoquias = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage
-  const end = start + itemsPerPage
-  return filteredParoquias.value.slice(start, end)
+  if (!filteredParoquias.value.length)
+    return []
+  const start = (currentPage.value - 1) * ITEMS_PER_PAGE
+  return filteredParoquias.value.slice(start, start + ITEMS_PER_PAGE)
 })
 
-// Functions
-function filterParoquias() {
-  filteredParoquias.value = paroquias.value.filter((paroquia) => {
-    const matchesSearch = !searchQuery.value
-      || paroquia.nome.toLowerCase().includes(searchQuery.value.toLowerCase())
+const isGridView = computed(() => viewMode.value === 'grid')
 
-    const matchesCity = !selectedCity.value
-      || paroquia.cidade === selectedCity.value
+const skeletonCount = computed(() => (isGridView.value ? 6 : 4))
 
-    const matchesRegion = !selectedRegion.value
-      || paroquia.regiao === selectedRegion.value
+const skeletonType = computed(() => (isGridView.value ? 'card' : 'list-item-three-line'))
 
-    return matchesSearch && matchesCity && matchesRegion
-  })
+const hasActiveFilters = computed(() => Boolean(searchQuery.value.trim() || selectedCity.value || selectedDiocese.value))
 
-  currentPage.value = 1 // Reset to first page
-}
+const resultLabel = computed(() => {
+  const totalFiltered = filteredParoquias.value.length
+  if (!totalFiltered)
+    return 'Nenhuma paróquia encontrada'
+  const start = (currentPage.value - 1) * ITEMS_PER_PAGE + 1
+  const end = Math.min(start + ITEMS_PER_PAGE - 1, totalFiltered)
+  return `Mostrando ${start}-${end} de ${totalFiltered} paróquias`
+})
+
+const emptyStateMessage = computed(() => {
+  if (hasActiveFilters.value)
+    return 'Ajuste os filtros ou pesquise novamente para encontrar outras paróquias.'
+  return 'Ainda não temos paróquias cadastradas para exibir aqui.'
+})
 
 function clearFilters() {
   searchQuery.value = ''
-  selectedCity.value = ''
-  selectedRegion.value = ''
-  filterParoquias()
+  selectedCity.value = null
+  selectedDiocese.value = null
+  currentPage.value = 1
 }
-
-// Watch for page changes to scroll to top
-watch(currentPage, () => {
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-})
 </script>
 
 <template>
   <div>
-    <!-- Page Header -->
     <v-container fluid class="pa-0">
       <v-sheet
-        :height="200"
+        :height="220"
         color="primary"
         class="d-flex align-center"
       >
         <v-container>
-          <h1 class="text-h3 text-white font-weight-bold mb-2">
+          <h1 class="text-h4 text-white font-weight-bold mb-2">
             Paróquias
           </h1>
-          <p class="text-h6 text-white mb-0">
-            Explore todas as paróquias da nossa diocese
+          <p class="text-body-1 text-white opacity-90 mb-4">
+            Explore todas as paróquias da nossa diocese, descubra horários, clero e informações de contato.
           </p>
+          <div class="d-flex flex-wrap align-center">
+            <v-chip
+              color="white"
+              text-color="primary"
+              variant="tonal"
+              class="mr-3 mb-2"
+            >
+              <v-icon start color="primary">
+                fluent-color:building-retail-24
+              </v-icon>
+              {{ totalParoquias }} cadastrada{{ totalParoquias !== 1 ? 's' : '' }}
+            </v-chip>
+            <v-chip
+              v-if="hasActiveFilters"
+              color="white"
+              text-color="primary"
+              variant="tonal"
+              class="mb-2"
+            >
+              <v-icon start color="primary">
+                fluent-color:filter-24
+              </v-icon>
+              Filtros ativos
+            </v-chip>
+          </div>
         </v-container>
       </v-sheet>
     </v-container>
 
-    <!-- Filters and Search -->
     <v-container class="py-6">
       <v-card elevation="2" class="mb-6">
         <v-card-text class="pa-6">
@@ -165,7 +241,6 @@ watch(currentPage, () => {
                 prepend-inner-icon="fluent-color:search-24"
                 variant="outlined"
                 clearable
-                @input="filterParoquias"
               />
             </v-col>
             <v-col cols="12" md="3">
@@ -175,24 +250,23 @@ watch(currentPage, () => {
                 label="Cidade"
                 variant="outlined"
                 clearable
-                @update:model-value="filterParoquias"
               />
             </v-col>
             <v-col cols="12" md="3">
               <v-select
-                v-model="selectedRegion"
-                :items="regions"
-                label="Região"
+                v-model="selectedDiocese"
+                :items="dioceses"
+                label="Diocese"
                 variant="outlined"
                 clearable
-                @update:model-value="filterParoquias"
               />
             </v-col>
-            <v-col cols="12" md="2">
+            <v-col cols="12" md="2" class="d-flex align-end">
               <v-btn
                 block
                 color="primary"
                 variant="flat"
+                :disabled="!hasActiveFilters"
                 @click="clearFilters"
               >
                 <v-icon start>
@@ -205,10 +279,20 @@ watch(currentPage, () => {
         </v-card-text>
       </v-card>
 
-      <!-- Results Info -->
-      <div class="d-flex justify-space-between align-center mb-4">
-        <p class="text-body-1 text-medium-emphasis">
-          {{ filteredParoquias.length }} paróquia{{ filteredParoquias.length !== 1 ? 's' : '' }} encontrada{{ filteredParoquias.length !== 1 ? 's' : '' }}
+      <v-alert
+        v-if="error"
+        type="error"
+        variant="tonal"
+        class="mb-6"
+      >
+        Não foi possível carregar as paróquias. <v-btn variant="text" color="error" size="small" @click="refresh">
+          Tentar novamente
+        </v-btn>
+      </v-alert>
+
+      <div class="d-flex justify-space-between align-center flex-wrap mb-4">
+        <p class="text-body-1 text-medium-emphasis mb-2">
+          {{ resultLabel }}
         </p>
 
         <v-btn-toggle
@@ -216,6 +300,7 @@ watch(currentPage, () => {
           mandatory
           variant="outlined"
           divided
+          class="mb-2"
         >
           <v-btn value="grid" size="small">
             <v-icon>fluent-color:grid-24</v-icon>
@@ -226,8 +311,24 @@ watch(currentPage, () => {
         </v-btn-toggle>
       </div>
 
-      <!-- Grid View -->
-      <v-row v-if="viewMode === 'grid'">
+      <v-row v-if="pending" class="mb-6" :dense="isGridView">
+        <v-col
+          v-for="index in skeletonCount"
+          :key="`skeleton-${index}`"
+          cols="12"
+          :sm="isGridView ? 6 : 12"
+          :md="isGridView ? 4 : 12"
+          :lg="isGridView ? 3 : 12"
+        >
+          <v-skeleton-loader
+            class="rounded-lg"
+            :type="skeletonType"
+            :height="isGridView ? 280 : 180"
+          />
+        </v-col>
+      </v-row>
+
+      <v-row v-if="!pending && viewMode === 'grid'">
         <v-col
           v-for="paroquia in paginatedParoquias"
           :key="paroquia.id"
@@ -240,85 +341,36 @@ watch(currentPage, () => {
         </v-col>
       </v-row>
 
-      <!-- List View -->
-      <div v-else>
-        <v-card
+      <div v-else-if="!pending">
+        <ParoquiaCard
           v-for="paroquia in paginatedParoquias"
-          :key="paroquia.id"
-          elevation="1"
-          class="mb-3"
-        >
-          <v-row no-gutters>
-            <v-col cols="3" md="2">
-              <v-img
-                :src="paroquia.fotoCapa || '/api/placeholder/200/150'"
-                :alt="paroquia.nome"
-                height="120"
-                cover
-              />
-            </v-col>
-            <v-col cols="9" md="10">
-              <v-card-text class="pa-4">
-                <v-row>
-                  <v-col cols="12" md="8">
-                    <h3 class="text-h6 mb-2">
-                      {{ paroquia.nome }}
-                    </h3>
-                    <div class="d-flex align-center mb-2">
-                      <v-icon icon="fluent-color:location-24" size="16" class="mr-2 text-medium-emphasis" />
-                      <span class="text-body-2 text-medium-emphasis">{{ paroquia.cidade }}, {{ paroquia.uf }}</span>
-                    </div>
-                    <div class="d-flex align-center mb-2">
-                      <v-icon icon="fluent-color:building-multiple-24" size="16" class="mr-2 text-medium-emphasis" />
-                      <span class="text-body-2 text-medium-emphasis">
-                        {{ paroquia.totalCapelas }} capela{{ paroquia.totalCapelas !== 1 ? 's' : '' }}
-                      </span>
-                    </div>
-                    <div v-if="paroquia.proximaMissa" class="d-flex align-center">
-                      <v-icon icon="fluent-color:clock-24" size="16" class="mr-2 text-medium-emphasis" />
-                      <span class="text-body-2 text-medium-emphasis">
-                        Próxima missa: {{ paroquia.proximaMissa }}
-                      </span>
-                    </div>
-                  </v-col>
-                  <v-col cols="12" md="4" class="text-right">
-                    <v-btn
-                      color="primary"
-                      variant="outlined"
-                      :to="`/p/${paroquia.id}`"
-                    >
-                      Ver Detalhes
-                    </v-btn>
-                  </v-col>
-                </v-row>
-              </v-card-text>
-            </v-col>
-          </v-row>
-        </v-card>
+          :key="`list-${paroquia.id}`"
+          :paroquia="paroquia"
+          variant="list"
+          class="mb-4"
+        />
       </div>
 
-      <!-- No Results -->
-      <v-row v-if="filteredParoquias.length === 0">
+      <v-row v-if="!pending && filteredParoquias.length === 0">
         <v-col cols="12" class="text-center py-12">
           <v-icon icon="fluent-color:building-retail-24" size="64" class="text-disabled mb-4" />
           <h3 class="text-h5 mb-2 text-disabled">
             Nenhuma paróquia encontrada
           </h3>
           <p class="text-body-1 text-disabled mb-4">
-            Tente ajustar os filtros ou buscar por outro termo
+            {{ emptyStateMessage }}
           </p>
           <v-btn
             color="primary"
             variant="outlined"
             @click="clearFilters"
           >
-            Limpar Filtros
+            Limpar filtros
           </v-btn>
         </v-col>
       </v-row>
 
-      <!-- Pagination -->
-      <div v-if="totalPages > 1" class="d-flex justify-center mt-8">
+      <div v-if="!pending && filteredParoquias.length > 0 && totalPages > 1" class="d-flex justify-center mt-8">
         <v-pagination
           v-model="currentPage"
           :length="totalPages"
