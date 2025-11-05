@@ -32,6 +32,31 @@ A mobile-first Nuxt 4 + Vuetify 3 catalog for Brazilian Catholic dioceses, paris
 - **Image handling**: Use `getImageUrl()` with responsive options. Fallback to placehold.co placeholders when null
 - **Navigation**: Use `navigateTo()` for routing, construct URLs from `slug` or `id` fields
 
+### Styling & CSS Guidelines
+⚠️ **CRITICAL: NO CUSTOM CSS** ⚠️
+- **NEVER write custom CSS/SCSS**: Use only Vuetify utility classes for all styling needs
+- **Vuetify components first**: Always prefer native Vuetify components over custom HTML + CSS
+- **Utility classes**: Use Vuetify's utility system (spacing: `ma-4`, `pa-2`; text: `text-h5`, `text-center`; colors: `bg-primary`, `text-secondary`; flex: `d-flex`, `justify-center`, `align-center`)
+- **Component API reference**: Use MCP tool `get_component_api_by_version` to check available props, slots, and events before implementing
+- **Responsive design**: Use Vuetify display helpers (`d-none d-sm-flex`, breakpoint props) instead of media queries
+- **Theme colors**: Reference theme colors via utility classes (`bg-primary`, `text-accent`) - never hardcode hex/rgb values
+
+Examples of CORRECT styling:
+```vue
+<!-- ✅ GOOD: Vuetify utilities only -->
+<v-card class="ma-4 pa-6 rounded-lg elevation-2">
+  <v-card-title class="text-h5 text-primary mb-2">Title</v-card-title>
+  <v-card-text class="d-flex flex-column ga-3">Content</v-card-text>
+</v-card>
+
+<!-- ❌ BAD: Custom CSS -->
+<div class="custom-card">
+  <style scoped>
+  .custom-card { margin: 16px; padding: 24px; }
+  </style>
+</div>
+```
+
 ### Vuetify Theme System
 - **Custom theme**: Catholic-inspired colors in `nuxt.config.ts` runtimeConfig.public.theme
 - **Dynamic variants**: Theme plugin (`app/plugins/vuetify.ts`) auto-generates -darken-1/2 and -lighten-1/2 variants via `mix()` function
@@ -55,6 +80,49 @@ deep: JSON.stringify({ autor: { _filter: { ativo: { _eq: true }}}})
 - Key data by unique identifier: `paroquia-detail:${slug}`
 - Implement slug OR id fallback pattern (try slug first, then id)
 - Check for 404 errors explicitly and handle gracefully
+
+### Nuxt 4 Best Practices
+⚠️ **Leverage Nuxt 4 Built-ins** ⚠️
+- **Auto-imports**: Never manually import composables, components, or utilities (Nuxt auto-imports from `composables/`, `components/`, `utils/`)
+- **File-based routing**: Use `pages/` directory structure for routes - no manual router config
+- **Server routes**: Use `server/api/` for API endpoints with automatic route generation
+- **SEO & Meta**: Use `useSeoMeta()`, `useHead()`, or `definePageMeta()` for metadata - never manual `<head>` tags
+- **Data fetching**: Prefer `useAsyncData()` and `useFetch()` over manual async/await in setup
+- **Error handling**: Use `createError()` and `showError()` for standardized error pages
+- **State management**: Use `useState()` for reactive cross-component state instead of external state libs
+- **Layouts**: Define layouts in `layouts/` and reference with `definePageMeta({ layout: 'name' })`
+- **Middleware**: Use `middleware/` for route guards, auth checks (auto-applied or via `definePageMeta`)
+- **Environment**: Always use `useRuntimeConfig()` for env vars (public or private)
+
+Examples:
+```vue
+<!-- ✅ GOOD: Nuxt 4 patterns -->
+<script setup lang="ts">
+// Auto-imported composables
+const { data } = await useAsyncData('key', () => $fetch('/api/data'))
+
+// Built-in SEO
+useSeoMeta({
+  title: 'Page Title',
+  description: 'Page description'
+})
+
+// Auto-imported components (no import needed)
+</script>
+
+<template>
+  <ParoquiaCard :paroquia="data" />
+</template>
+
+<!-- ❌ BAD: Manual imports, custom patterns -->
+<script setup lang="ts">
+import { ref } from 'vue'
+import ParoquiaCard from '@/components/ParoquiaCard.vue'
+
+const data = ref(null)
+// Manual fetch logic...
+</script>
+```
 
 ### Mobile-First Layout
 - **Bottom navigation**: 4 buttons (Agenda, Mapa, Notícias, Time) defined in `app/layouts/default.vue`

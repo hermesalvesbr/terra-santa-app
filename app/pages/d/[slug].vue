@@ -18,7 +18,7 @@ const dioceseSlug = computed(() => {
 const { data: dioceseResponse } = await useFetch<{ data: Diocese[] }>('/api/directus/diocese', {
   query: {
     limit: 1,
-    fields: ['id', 'nome', 'slug', 'descricao', 'foto_capa.*', 'logo.*', 'site', 'instagram', 'youtube', 'whatsapp'].join(','),
+    fields: ['id', 'nome', 'slug', 'descricao', 'foto_capa.*', 'logo.*', 'site', 'instagram', 'youtube', 'whatsapp', 'bispo.nome', 'bispo.hierarquia'].join(','),
     filter: JSON.stringify({
       status: { _eq: 'published' },
       slug: { _eq: dioceseSlug.value },
@@ -153,6 +153,15 @@ const dioceseLocation = computed(() => {
   return [firstParoquia.cidade, firstParoquia.uf].filter(Boolean).join(', ')
 })
 
+// Get bishop name for display
+const bispoLabel = computed(() => {
+  const bispo = diocese.value?.bispo
+  if (!bispo || typeof bispo !== 'object')
+    return ''
+  const hierarquia = bispo.hierarquia || 'Dom'
+  return `${hierarquia} ${bispo.nome}`
+})
+
 function normalizeValue(value: string | null | undefined) {
   return (value || '')
     .toString()
@@ -257,6 +266,14 @@ const heroBackgroundUrl = computed(() => {
     return ''
   return getImageUrl(diocese.value.foto_capa, { width: 1920, height: 600, fit: 'cover', quality: 85 })
 })
+
+const logoUrl = getImageUrl(diocese.value?.logo || null)
+
+const logoAlt = computed(() => {
+  if (!diocese.value?.nome)
+    return 'Logotipo da diocese'
+  return `Logotipo da ${diocese.value.nome}`
+})
 </script>
 
 <template>
@@ -264,70 +281,67 @@ const heroBackgroundUrl = computed(() => {
     <!-- Hero Section -->
     <v-sheet
       class="position-relative overflow-hidden"
-      :style="heroBackgroundUrl ? `background-image: url('${heroBackgroundUrl}'); background-size: cover; background-position: center;` : undefined"
       color="primary"
       elevation="0"
     >
-      <!-- Overlay -->
-      <v-sheet
+      <!-- Background Image with Gradient Overlay -->
+      <v-img
+        v-if="heroBackgroundUrl"
+        :src="heroBackgroundUrl"
+        cover
+        height="100%"
         class="position-absolute w-100 h-100"
-        style="background: linear-gradient(to bottom, rgba(0,0,0,.5), rgba(0,0,0,.7)); z-index: 0;"
-        color="transparent"
+        gradient="to bottom, rgba(0,0,0,.6), rgba(0,0,0,.8)"
       />
-      <v-container class="py-12 position-relative" style="z-index: 1;">
+
+      <v-container class="py-6 py-sm-8 py-md-12 position-relative" style="z-index: 1;">
         <div class="text-center text-white">
-          <!-- Logo da Diocese -->
-          <div v-if="diocese?.logo" class="d-flex justify-center mb-6">
+          <!-- Logo da Diocese com Background Translúcido -->
+          <div>
             <v-img
-              :src="getImageUrl(diocese.logo, { width: 400, height: 200, fit: 'contain', quality: 90 })"
-              :alt="diocese.nome"
-              max-width="200"
-              max-height="120"
-              class="elevation-4 bg-white rounded-lg pa-3"
+              :src="logoUrl"
+              :alt="logoAlt"
+              height="125"
+              fit="contain"
             />
-          </div>
-          <div v-else class="d-flex justify-center mb-6">
-            <v-sheet
-              class="elevation-4 rounded-lg pa-6 d-flex align-center justify-center"
-              color="white"
-              width="160"
-              height="120"
-            >
-              <v-icon icon="mdi-church" size="64" color="primary" />
-            </v-sheet>
           </div>
 
           <!-- Nome da Diocese -->
-          <h1 class="text-h3 font-weight-bold mb-2">
+          <h1 class="text-h5 text-sm-h4 text-md-h3 font-weight-bold mb-1 mb-sm-2 px-4" style="text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
             {{ diocese?.nome || 'Diocese' }}
           </h1>
 
+          <!-- Bispo -->
+          <p v-if="bispoLabel" class="text-body-2 text-sm-subtitle-1 text-md-h6 mb-0 mb-sm-1 font-weight-medium px-4" style="opacity: 0.95; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+            {{ bispoLabel }}
+          </p>
+
           <!-- Localização -->
-          <div v-if="dioceseLocation" class="text-h6 mb-6 d-flex align-center justify-center" style="opacity: 0.9;">
-            <v-icon icon="mdi-map-marker" size="24" class="mr-2" />
+          <div v-if="dioceseLocation" class="text-body-2 text-sm-body-1 text-md-subtitle-1 mb-3 mb-sm-4 d-flex align-center justify-center px-4" style="opacity: 0.9; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+            <v-icon icon="mdi-map-marker" :size="$vuetify.display.xs ? 18 : 20" class="mr-1" />
             <span>{{ dioceseLocation }}</span>
           </div>
 
           <!-- Estatísticas -->
-          <div class="d-flex justify-center flex-wrap ga-3">
+          <div class="d-flex justify-center flex-wrap ga-2 ga-sm-3 mt-4 mt-sm-6 px-4">
             <v-chip
               color="white"
               variant="flat"
-              size="large"
-              class="px-6"
+              :size="$vuetify.display.xs ? 'small' : 'default'"
+              class="px-3 px-sm-4 px-md-6 font-weight-medium"
             >
-              <v-icon icon="mdi-church" start />
-              {{ totalParoquias }} Paróquia{{ totalParoquias !== 1 ? 's' : '' }}
+              <v-icon icon="mdi-church" start :size="$vuetify.display.xs ? 'x-small' : 'small'" />
+              <span class="text-caption text-sm-body-2">{{ totalParoquias }} Paróquia{{ totalParoquias !== 1 ? 's' : '' }}</span>
             </v-chip>
             <v-chip
               v-if="cities.length > 1"
               color="white"
               variant="flat"
-              size="large"
-              class="px-6"
+              :size="$vuetify.display.xs ? 'small' : 'default'"
+              class="px-3 px-sm-4 px-md-6 font-weight-medium"
             >
-              <v-icon icon="mdi-city" start />
-              {{ cities.length }} Cidade{{ cities.length !== 1 ? 's' : '' }}
+              <v-icon icon="mdi-city" start :size="$vuetify.display.xs ? 'x-small' : 'small'" />
+              <span class="text-caption text-sm-body-2">{{ cities.length }} Cidade{{ cities.length !== 1 ? 's' : '' }}</span>
             </v-chip>
           </div>
         </div>
@@ -335,14 +349,14 @@ const heroBackgroundUrl = computed(() => {
     </v-sheet>
 
     <!-- Search Bar & Filters -->
-    <v-container style="margin-top: -40px; position: relative; z-index: 10;">
+    <v-container style="margin-top: -32px; position: relative; z-index: 10;" class="px-3 px-sm-4">
       <v-card
-        elevation="8"
+        :elevation="$vuetify.display.xs ? 6 : 8"
         rounded="xl"
         max-width="1000"
         class="mx-auto"
       >
-        <v-card-text class="pa-4">
+        <v-card-text class="pa-3 pa-sm-4">
           <v-row dense>
             <v-col cols="12" md="7">
               <v-text-field
@@ -352,7 +366,7 @@ const heroBackgroundUrl = computed(() => {
                 variant="solo-filled"
                 hide-details
                 clearable
-                density="comfortable"
+                :density="$vuetify.display.xs ? 'compact' : 'comfortable'"
               />
             </v-col>
             <v-col cols="12" sm="6" md="3">
@@ -364,7 +378,7 @@ const heroBackgroundUrl = computed(() => {
                 variant="solo-filled"
                 hide-details
                 clearable
-                density="comfortable"
+                :density="$vuetify.display.xs ? 'compact' : 'comfortable'"
               />
             </v-col>
             <v-col cols="12" sm="6" md="2" class="d-flex">
@@ -373,11 +387,11 @@ const heroBackgroundUrl = computed(() => {
                 mandatory
                 variant="outlined"
                 divided
-                density="comfortable"
+                :density="$vuetify.display.xs ? 'compact' : 'comfortable'"
                 class="flex-grow-1"
               >
-                <v-btn value="grid" icon="mdi-view-grid" />
-                <v-btn value="list" icon="mdi-view-list" />
+                <v-btn value="grid" icon="mdi-view-grid" :size="$vuetify.display.xs ? 'small' : 'default'" />
+                <v-btn value="list" icon="mdi-view-list" :size="$vuetify.display.xs ? 'small' : 'default'" />
               </v-btn-toggle>
             </v-col>
           </v-row>
@@ -386,7 +400,7 @@ const heroBackgroundUrl = computed(() => {
     </v-container>
 
     <!-- Main Content -->
-    <v-container class="py-4">
+    <v-container class="py-3 py-sm-4 px-3 px-sm-4">
       <!-- Loading State -->
       <v-row v-if="pending">
         <v-col

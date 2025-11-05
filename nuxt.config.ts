@@ -41,18 +41,7 @@ export default defineNuxtConfig({
     public: {
       // Automaticamente lê de NUXT_PUBLIC_DIRECTUS_URL do .env
       directusUrl: 'http://localhost:8055',
-      // Configurações de tema (podem ser sobrescritas por variáveis de ambiente)
-      theme: {
-        primary: '#1E3A8A', // Azul católico tradicional
-        secondary: '#2563EB', // Azul Maria
-        accent: '#FBBF24', // Dourado litúrgico
-        background: '#FFFFFF',
-        surface: '#FAFAFA',
-        surfaceVariant: '#F5F5F5',
-        outline: '#64748B',
-        text: '#212121',
-        muted: '#424242',
-      },
+
     },
   },
 })
