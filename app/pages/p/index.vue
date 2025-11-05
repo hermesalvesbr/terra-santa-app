@@ -8,6 +8,8 @@ useHead({
   ],
 })
 
+const route = useRoute()
+
 const ITEMS_PER_PAGE = 12
 
 const searchQuery = ref('')
@@ -15,6 +17,15 @@ const selectedCity = ref<string | null>(null)
 const selectedDiocese = ref<string | null>(null)
 const viewMode = ref<'grid' | 'list'>('grid')
 const currentPage = ref(1)
+
+// Aplicar filtro de diocese da query string
+onMounted(() => {
+  const dioceseParam = route.query.diocese
+  if (dioceseParam) {
+    const dioceseId = Array.isArray(dioceseParam) ? dioceseParam[0] : dioceseParam
+    selectedDiocese.value = dioceseId || null
+  }
+})
 
 const { data: paroquiasResponse, pending, error, refresh } = await useFetch<{ data: Paroquia[] }>(
   '/api/directus/paroquia',
@@ -34,6 +45,7 @@ const { data: paroquiasResponse, pending, error, refresh } = await useFetch<{ da
         'site',
         'capa.*',
         'diocese.id',
+        'diocese.slug',
         'diocese.nome',
       ].join(','),
       filter: JSON.stringify({
@@ -60,9 +72,23 @@ function extractDioceseName(paroquia: Paroquia) {
   return ''
 }
 
+function extractDioceseId(paroquia: Paroquia) {
+  if (paroquia.diocese && typeof paroquia.diocese === 'object' && 'id' in paroquia.diocese)
+    return String(paroquia.diocese.id)
+  return ''
+}
+
+function extractDioceseSlug(paroquia: Paroquia) {
+  if (paroquia.diocese && typeof paroquia.diocese === 'object' && 'slug' in paroquia.diocese)
+    return String(paroquia.diocese.slug)
+  return ''
+}
+
 interface PreparedParoquia {
   paroquia: Paroquia
   dioceseName: string
+  dioceseId: string
+  dioceseSlug: string
   cityNormalized: string
   dioceseNormalized: string
   searchCache: string
@@ -71,6 +97,8 @@ interface PreparedParoquia {
 const preparedParoquias = computed<PreparedParoquia[]>(() => {
   return allParoquias.value.map((paroquia) => {
     const dioceseName = extractDioceseName(paroquia)
+    const dioceseId = extractDioceseId(paroquia)
+    const dioceseSlug = extractDioceseSlug(paroquia)
     const cityNormalized = normalizeValue(paroquia.cidade)
     const dioceseNormalized = normalizeValue(dioceseName)
     const searchCache = normalizeValue([
@@ -85,6 +113,8 @@ const preparedParoquias = computed<PreparedParoquia[]>(() => {
     return {
       paroquia,
       dioceseName,
+      dioceseId,
+      dioceseSlug,
       cityNormalized,
       dioceseNormalized,
       searchCache,
@@ -122,8 +152,15 @@ const filteredParoquias = computed(() => {
       if (normalizedCity && entry.cityNormalized !== normalizedCity)
         return false
 
-      if (normalizedDiocese && entry.dioceseNormalized !== normalizedDiocese)
-        return false
+      // Filtrar por diocese: aceita slug, nome ou ID
+      if (normalizedDiocese) {
+        const matchesSlug = entry.dioceseSlug && normalizeValue(entry.dioceseSlug) === normalizedDiocese
+        const matchesName = entry.dioceseNormalized === normalizedDiocese
+        const matchesId = entry.dioceseId === selectedDiocese.value
+
+        if (!matchesSlug && !matchesName && !matchesId)
+          return false
+      }
 
       if (normalizedSearch && !entry.searchCache.includes(normalizedSearch))
         return false
