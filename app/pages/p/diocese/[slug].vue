@@ -1,54 +1,69 @@
 <script setup lang="ts">
-import type { Paroquia } from '~/types/schema'
+import type { Diocese, Paroquia } from '~/types/schema'
 
 definePageMeta({
-  entityType: 'geral',
-  pageTitle: 'Paróquias',
-})
-
-// SEO Meta Tags - Paróquias Listing
-useSeoMeta({
-  title: 'Paróquias - Terra Santa',
-  description: 'Explore todas as paróquias católicas da diocese. Encontre informações, horários de missas, localizações e contatos das paróquias.',
-  ogTitle: 'Paróquias - Terra Santa',
-  ogDescription: 'Explore todas as paróquias católicas da diocese. Encontre informações, horários de missas, localizações e contatos das paróquias.',
-  ogType: 'website',
-  ogUrl: 'https://terrasanta.app/p',
-  ogSiteName: 'Terra Santa',
-  twitterCard: 'summary_large_image',
-  twitterTitle: 'Paróquias - Terra Santa',
-  twitterDescription: 'Explore todas as paróquias católicas. Encontre informações, horários de missas e localizações.',
-  robots: 'index, follow',
-})
-
-useHead({
-  link: [
-    { rel: 'canonical', href: 'https://terrasanta.app/p' },
-  ],
-  htmlAttrs: {
-    lang: 'pt-BR',
-  },
+  entityType: 'diocese',
+  pageTitle: 'Diocese',
 })
 
 const route = useRoute()
+
+const dioceseSlug = computed(() => {
+  const param = route.params.slug
+  return Array.isArray(param) ? param[0] : param
+})
+
+// Buscar informações da diocese
+const { data: dioceseResponse } = await useFetch<{ data: Diocese[] }>('/api/directus/diocese', {
+  query: {
+    limit: 1,
+    fields: ['id', 'nome', 'slug', 'descricao', 'foto_capa.*', 'logo.*'].join(','),
+    filter: JSON.stringify({
+      status: { _eq: 'published' },
+      slug: { _eq: dioceseSlug.value },
+    }),
+  },
+})
+
+const diocese = computed(() => dioceseResponse.value?.data?.[0] || null)
+
+const headerTitleOverride = useState<string>('layout-header-title', () => '')
+
+watch(
+  () => diocese.value?.nome,
+  (nome) => {
+    headerTitleOverride.value = nome ? `D. ${nome}` : ''
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(() => {
+  headerTitleOverride.value = ''
+})
+
+// Atualizar meta tags
+useHead({
+  title: computed(() => diocese.value ? `Paróquias - ${diocese.value.nome}` : 'Paróquias'),
+  meta: [
+    {
+      name: 'description',
+      content: computed(() =>
+        diocese.value?.descricao
+          ? `Explore as paróquias da ${diocese.value.nome}. ${diocese.value.descricao.replace(/<[^>]*>/g, '').slice(0, 150)}...`
+          : 'Explore as paróquias da diocese.',
+      ),
+    },
+  ],
+})
 
 const ITEMS_PER_PAGE = 12
 
 const searchQuery = ref('')
 const selectedCity = ref<string | null>(null)
-const selectedDiocese = ref<string | null>(null)
 const viewMode = ref<'grid' | 'list'>('grid')
 const currentPage = ref(1)
 
-// Aplicar filtro de diocese da query string
-onMounted(() => {
-  const dioceseParam = route.query.diocese
-  if (dioceseParam) {
-    const dioceseId = Array.isArray(dioceseParam) ? dioceseParam[0] : dioceseParam
-    selectedDiocese.value = dioceseId || null
-  }
-})
-
+// Buscar paróquias da diocese
 const { data: paroquiasResponse, pending, error, refresh } = await useFetch<{ data: Paroquia[] }>(
   '/api/directus/paroquia',
   {
@@ -72,6 +87,9 @@ const { data: paroquiasResponse, pending, error, refresh } = await useFetch<{ da
       ].join(','),
       filter: JSON.stringify({
         status: { _eq: 'published' },
+        diocese: {
+          slug: { _eq: dioceseSlug.value },
+        },
       }),
     },
   },
@@ -88,57 +106,26 @@ function normalizeValue(value: string | null | undefined) {
     .toLowerCase()
 }
 
-function extractDioceseName(paroquia: Paroquia) {
-  if (paroquia.diocese && typeof paroquia.diocese === 'object' && 'nome' in paroquia.diocese)
-    return paroquia.diocese.nome as string
-  return ''
-}
-
-function extractDioceseId(paroquia: Paroquia) {
-  if (paroquia.diocese && typeof paroquia.diocese === 'object' && 'id' in paroquia.diocese)
-    return String(paroquia.diocese.id)
-  return ''
-}
-
-function extractDioceseSlug(paroquia: Paroquia) {
-  if (paroquia.diocese && typeof paroquia.diocese === 'object' && 'slug' in paroquia.diocese)
-    return String(paroquia.diocese.slug)
-  return ''
-}
-
 interface PreparedParoquia {
   paroquia: Paroquia
-  dioceseName: string
-  dioceseId: string
-  dioceseSlug: string
   cityNormalized: string
-  dioceseNormalized: string
   searchCache: string
 }
 
 const preparedParoquias = computed<PreparedParoquia[]>(() => {
   return allParoquias.value.map((paroquia) => {
-    const dioceseName = extractDioceseName(paroquia)
-    const dioceseId = extractDioceseId(paroquia)
-    const dioceseSlug = extractDioceseSlug(paroquia)
     const cityNormalized = normalizeValue(paroquia.cidade)
-    const dioceseNormalized = normalizeValue(dioceseName)
     const searchCache = normalizeValue([
       paroquia.nome,
       paroquia.descricao,
       paroquia.cidade,
-      dioceseName,
     ]
       .filter(Boolean)
       .join(' '))
 
     return {
       paroquia,
-      dioceseName,
-      dioceseId,
-      dioceseSlug,
       cityNormalized,
-      dioceseNormalized,
       searchCache,
     }
   })
@@ -155,34 +142,14 @@ const cities = computed(() => {
   return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'))
 })
 
-const dioceses = computed(() => {
-  const set = new Set<string>()
-  for (const entry of preparedParoquias.value) {
-    if (entry.dioceseName)
-      set.add(entry.dioceseName)
-  }
-  return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'))
-})
-
 const filteredParoquias = computed(() => {
   const normalizedCity = normalizeValue(selectedCity.value)
-  const normalizedDiocese = normalizeValue(selectedDiocese.value)
   const normalizedSearch = normalizeValue(searchQuery.value)
 
   return preparedParoquias.value
     .filter((entry) => {
       if (normalizedCity && entry.cityNormalized !== normalizedCity)
         return false
-
-      // Filtrar por diocese: aceita slug, nome ou ID
-      if (normalizedDiocese) {
-        const matchesSlug = entry.dioceseSlug && normalizeValue(entry.dioceseSlug) === normalizedDiocese
-        const matchesName = entry.dioceseNormalized === normalizedDiocese
-        const matchesId = entry.dioceseId === selectedDiocese.value
-
-        if (!matchesSlug && !matchesName && !matchesId)
-          return false
-      }
 
       if (normalizedSearch && !entry.searchCache.includes(normalizedSearch))
         return false
@@ -192,7 +159,7 @@ const filteredParoquias = computed(() => {
     .map(entry => entry.paroquia)
 })
 
-watch([searchQuery, selectedCity, selectedDiocese], () => {
+watch([searchQuery, selectedCity], () => {
   currentPage.value = 1
 })
 
@@ -220,7 +187,7 @@ const skeletonCount = computed(() => (isGridView.value ? 6 : 4))
 
 const skeletonType = computed(() => (isGridView.value ? 'card' : 'list-item-three-line'))
 
-const hasActiveFilters = computed(() => Boolean(searchQuery.value.trim() || selectedCity.value || selectedDiocese.value))
+const hasActiveFilters = computed(() => Boolean(searchQuery.value.trim() || selectedCity.value))
 
 const resultLabel = computed(() => {
   const totalFiltered = filteredParoquias.value.length
@@ -234,15 +201,23 @@ const resultLabel = computed(() => {
 const emptyStateMessage = computed(() => {
   if (hasActiveFilters.value)
     return 'Ajuste os filtros ou pesquise novamente para encontrar outras paróquias.'
-  return 'Ainda não temos paróquias cadastradas para exibir aqui.'
+  return 'Ainda não temos paróquias cadastradas nesta diocese.'
 })
 
 function clearFilters() {
   searchQuery.value = ''
   selectedCity.value = null
-  selectedDiocese.value = null
   currentPage.value = 1
 }
+
+const { getImageUrl } = useDirectusAsset()
+
+const headerImageSrc = computed(() => {
+  if (!diocese.value)
+    return ''
+  const image = diocese.value.foto_capa || diocese.value.logo
+  return getImageUrl(image, { width: 1920, height: 400, fit: 'cover', quality: 80 })
+})
 </script>
 
 <template>
@@ -251,14 +226,33 @@ function clearFilters() {
       <v-sheet
         :height="220"
         color="primary"
-        class="d-flex align-center"
+        class="d-flex align-center position-relative overflow-hidden"
       >
-        <v-container>
+        <v-img
+          v-if="headerImageSrc"
+          :src="headerImageSrc"
+          cover
+          class="position-absolute w-100 h-100"
+          gradient="to bottom, rgba(0,0,0,.4), rgba(0,0,0,.7)"
+        />
+        <v-container class="position-relative">
+          <v-breadcrumbs
+            class="text-white pa-0 mb-2"
+            :items="[
+              { title: 'Início', to: '/', disabled: false },
+              { title: 'Dioceses', to: '/', disabled: false },
+              { title: diocese?.nome || 'Paróquias', disabled: true },
+            ]"
+          >
+            <template #divider>
+              <v-icon icon="mdi-chevron-right" />
+            </template>
+          </v-breadcrumbs>
           <h1 class="text-h4 text-white font-weight-bold mb-2">
-            Paróquias
+            {{ diocese?.nome || 'Paróquias' }}
           </h1>
-          <p class="text-body-1 text-white opacity-90 mb-4">
-            Explore todas as paróquias da nossa diocese, descubra horários, clero e informações de contato.
+          <p v-if="diocese?.descricao" class="text-body-1 text-white opacity-90 mb-4" style="max-width: 800px;">
+            {{ diocese.descricao.replace(/<[^>]*>/g, '').slice(0, 200) }}{{ diocese.descricao.length > 200 ? '...' : '' }}
           </p>
           <div class="d-flex flex-wrap align-center">
             <v-chip
@@ -268,9 +262,9 @@ function clearFilters() {
               class="mr-3 mb-2"
             >
               <v-icon start color="primary">
-                fluent-color:building-retail-24
+                mdi-church
               </v-icon>
-              {{ totalParoquias }} cadastrada{{ totalParoquias !== 1 ? 's' : '' }}
+              {{ totalParoquias }} paróquia{{ totalParoquias !== 1 ? 's' : '' }}
             </v-chip>
             <v-chip
               v-if="hasActiveFilters"
@@ -280,7 +274,7 @@ function clearFilters() {
               class="mb-2"
             >
               <v-icon start color="primary">
-                fluent-color:filter-24
+                mdi-filter
               </v-icon>
               Filtros ativos
             </v-chip>
@@ -293,29 +287,20 @@ function clearFilters() {
       <v-card elevation="2" class="mb-6">
         <v-card-text class="pa-6">
           <v-row>
-            <v-col cols="12" md="4">
+            <v-col cols="12" md="6">
               <v-text-field
                 v-model="searchQuery"
                 label="Buscar paróquia"
-                prepend-inner-icon="fluent-color:search-24"
+                prepend-inner-icon="mdi-magnify"
                 variant="outlined"
                 clearable
               />
             </v-col>
-            <v-col cols="12" md="3">
+            <v-col cols="12" md="4">
               <v-select
                 v-model="selectedCity"
                 :items="cities"
                 label="Cidade"
-                variant="outlined"
-                clearable
-              />
-            </v-col>
-            <v-col cols="12" md="3">
-              <v-select
-                v-model="selectedDiocese"
-                :items="dioceses"
-                label="Diocese"
                 variant="outlined"
                 clearable
               />
@@ -329,7 +314,7 @@ function clearFilters() {
                 @click="clearFilters"
               >
                 <v-icon start>
-                  fluent-color:filter-dismiss-24
+                  mdi-filter-remove
                 </v-icon>
                 Limpar
               </v-btn>
@@ -362,10 +347,10 @@ function clearFilters() {
           class="mb-2"
         >
           <v-btn value="grid" size="small">
-            <v-icon>fluent-color:grid-24</v-icon>
+            <v-icon>mdi-view-grid</v-icon>
           </v-btn>
           <v-btn value="list" size="small">
-            <v-icon>fluent-color:text-bullet-list-square-24</v-icon>
+            <v-icon>mdi-view-list</v-icon>
           </v-btn>
         </v-btn-toggle>
       </div>
@@ -412,7 +397,7 @@ function clearFilters() {
 
       <v-row v-if="!pending && filteredParoquias.length === 0">
         <v-col cols="12" class="text-center py-12">
-          <v-icon icon="fluent-color:building-retail-24" size="64" class="text-disabled mb-4" />
+          <v-icon icon="mdi-church" size="64" class="text-disabled mb-4" />
           <h3 class="text-h5 mb-2 text-disabled">
             Nenhuma paróquia encontrada
           </h3>
@@ -420,6 +405,7 @@ function clearFilters() {
             {{ emptyStateMessage }}
           </p>
           <v-btn
+            v-if="hasActiveFilters"
             color="primary"
             variant="outlined"
             @click="clearFilters"

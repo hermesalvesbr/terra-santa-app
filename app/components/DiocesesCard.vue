@@ -60,7 +60,7 @@ const descriptionHtml = computed(() => {
 })
 
 const detailRoute = computed(() => {
-  return `/p?diocese=${props.diocese.slug || props.diocese.id}`
+  return `/d/${props.diocese.slug}`
 })
 
 const goToDetail = () => navigateTo(detailRoute.value)

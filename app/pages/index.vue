@@ -1,11 +1,33 @@
 <script setup lang="ts">
 import type { Diocese } from '~/types/schema'
 
+definePageMeta({
+  entityType: 'geral',
+  pageTitle: 'Dioceses do Brasil',
+})
+
+// SEO Meta Tags - Home Page
+useSeoMeta({
+  title: 'Encontre sua Diocese - Terra Santa',
+  description: 'Encontre sua diocese e descubra as paróquias, eventos e comunidades católicas próximas a você. Diretório completo de dioceses brasileiras.',
+  ogTitle: 'Encontre sua Diocese - Terra Santa',
+  ogDescription: 'Encontre sua diocese e descubra as paróquias, eventos e comunidades católicas próximas a você. Diretório completo de dioceses brasileiras.',
+  ogType: 'website',
+  ogUrl: 'https://terrasanta.app',
+  ogSiteName: 'Terra Santa',
+  twitterCard: 'summary_large_image',
+  twitterTitle: 'Encontre sua Diocese - Terra Santa',
+  twitterDescription: 'Encontre sua diocese e descubra as paróquias, eventos e comunidades católicas próximas a você.',
+  robots: 'index, follow',
+})
+
 useHead({
-  title: 'Encontre sua Diocese',
-  meta: [
-    { name: 'description', content: 'Encontre sua diocese e descubra as paróquias, eventos e comunidades católicas próximas a você.' },
+  link: [
+    { rel: 'canonical', href: 'https://terrasanta.app' },
   ],
+  htmlAttrs: {
+    lang: 'pt-BR',
+  },
 })
 
 // Buscar dioceses

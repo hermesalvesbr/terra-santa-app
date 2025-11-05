@@ -4,8 +4,10 @@ import type { Paroquia } from '~/types/schema'
 const props = withDefaults(defineProps<{
   paroquia: Paroquia
   variant?: 'grid' | 'list'
+  dioceseSlug?: string
 }>(), {
   variant: 'grid',
+  dioceseSlug: undefined,
 })
 
 const { getImageUrl } = useDirectusAsset()
@@ -21,7 +23,8 @@ const imageOptions = computed(() => {
 const imageHeight = computed(() => (isListVariant.value ? 180 : 160))
 
 const imageSrc = computed(() => {
-  return getImageUrl(props.paroquia.capa, imageOptions.value)
+  const image = props.paroquia.capa || props.paroquia.logo
+  return getImageUrl(image, imageOptions.value)
 })
 
 const cityLabel = computed(() => {
@@ -35,6 +38,13 @@ const dioceseLabel = computed(() => {
   return ''
 })
 
+const extractedDioceseSlug = computed(() => {
+  const diocese = props.paroquia.diocese
+  if (diocese && typeof diocese === 'object' && 'slug' in diocese)
+    return diocese.slug as string
+  return ''
+})
+
 const descriptionExcerpt = computed(() => {
   if (!props.paroquia.descricao)
     return 'Conheça mais detalhes desta paróquia em nossa diocese.'
@@ -45,7 +55,12 @@ const descriptionExcerpt = computed(() => {
 })
 
 const detailRoute = computed(() => {
-  return `/p/${props.paroquia.slug || props.paroquia.id}`
+  const dioceseSlug = props.dioceseSlug || extractedDioceseSlug.value
+  if (!dioceseSlug) {
+    // Fallback se não tiver slug da diocese
+    return `/p/${props.paroquia.slug}`
+  }
+  return `/d/${dioceseSlug}/p/${props.paroquia.slug}`
 })
 
 const goToDetail = () => navigateTo(detailRoute.value)

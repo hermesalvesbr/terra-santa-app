@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import type { Paroquia, ParoquiaHorario } from '~/types/schema'
 
+definePageMeta({
+  entityType: 'paroquia',
+  pageTitle: 'Paróquia',
+})
+
 const route = useRoute()
+const headerTitleOverride = useState<string>('layout-header-title', () => '')
 
 const paroquiaParam = computed(() => {
   const param = route.params.id
@@ -154,6 +160,18 @@ const descricaoResumo = computed(() => {
   return clean.length > 180 ? `${clean.slice(0, 177)}...` : clean
 })
 
+watch(
+  () => paroquia.value?.nome,
+  (nome) => {
+    headerTitleOverride.value = nome ? `P. ${nome}` : ''
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(() => {
+  headerTitleOverride.value = ''
+})
+
 function resolveDiaSemana(dia: ParoquiaHorario['dia_semana']) {
   if (!dia)
     return 'Horários'
@@ -296,17 +314,66 @@ const hasEventos = computed(() => proximosEventos.value.length > 0)
 const hasClero = computed(() => cleroCards.value.length > 0)
 const hasContatos = computed(() => contatoLinks.value.length > 0)
 
-const pageDescription = computed(() => descricaoResumo.value)
+// SEO Meta Tags - Nuxt 4 Best Practices
+const config = useRuntimeConfig()
 
-useHead(() => ({
-  title: paroquia.value?.nome ? `${paroquia.value.nome} - Terra Santa` : 'Paróquia - Terra Santa',
-  meta: [
+const seoTitle = computed(() => {
+  if (!paroquia.value?.nome)
+    return 'Paróquia - Terra Santa'
+  const parts = [paroquia.value.nome]
+  if (cidadeLabel.value)
+    parts.push(cidadeLabel.value)
+  return `${parts.join(' • ')} - Terra Santa`
+})
+
+const seoDescription = computed(() => {
+  if (!paroquia.value)
+    return 'Conheça a história e as atividades desta paróquia católica.'
+  return descricaoResumo.value
+})
+
+const seoImage = computed(() => {
+  if (!paroquia.value?.capa)
+    return `${config.public.directusUrl || 'https://terrasanta.app'}/assets/og-default.jpg`
+  return getImageUrl(paroquia.value.capa, { width: 1200, height: 630, fit: 'cover', quality: 85 })
+})
+
+const canonicalUrl = computed(() => {
+  if (!paroquia.value)
+    return ''
+  const baseUrl = 'https://terrasanta.app'
+  return `${baseUrl}/p/${paroquia.value.slug || paroquia.value.id}`
+})
+
+// Type-safe SEO meta tags with Open Graph and Twitter Card
+useSeoMeta({
+  title: seoTitle,
+  description: seoDescription,
+  ogTitle: seoTitle,
+  ogDescription: seoDescription,
+  ogImage: seoImage,
+  ogType: 'website',
+  ogUrl: canonicalUrl,
+  ogSiteName: 'Terra Santa',
+  twitterCard: 'summary_large_image',
+  twitterTitle: seoTitle,
+  twitterDescription: seoDescription,
+  twitterImage: seoImage,
+  robots: 'index, follow',
+})
+
+// Canonical URL and additional head elements
+useHead({
+  link: [
     {
-      name: 'description',
-      content: pageDescription.value,
+      rel: 'canonical',
+      href: canonicalUrl,
     },
   ],
-}))
+  htmlAttrs: {
+    lang: 'pt-BR',
+  },
+})
 </script>
 
 <template>

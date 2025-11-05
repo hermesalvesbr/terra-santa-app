@@ -15,6 +15,11 @@ interface CalendarEventClick {
   event: LocalEvent
 }
 
+definePageMeta({
+  entityType: 'geral',
+  pageTitle: 'Agenda',
+})
+
 // SEO
 useHead({
   title: 'Agenda',
@@ -29,7 +34,7 @@ const selectedType = ref('')
 const selectedLocation = ref('')
 const selectedTime = ref('')
 const viewMode = ref<'list' | 'calendar'>('list')
-const calendarDate = ref([new Date()])
+const calendarDate = ref<Date>(new Date())
 const eventDialog = ref(false)
 const selectedEvent = ref<LocalEvent | null>(null)
 
@@ -241,12 +246,13 @@ function getEventTypeColor(type: string) {
   return colors[type] || 'grey'
 }
 
-function showEventDetails(event: CalendarEventClick) {
-  selectedEvent.value = event.event
+function showEventDetails(payload: CalendarEventClick | any) {
+  const detail = (payload && 'event' in payload) ? (payload as CalendarEventClick).event : null
+  selectedEvent.value = detail
   eventDialog.value = true
 }
 
-function selectDate(_date: Date) {
+function selectDate(_payload: any) {
   // Handle date selection in calendar view
   // Implementation would filter events for this date
 }
