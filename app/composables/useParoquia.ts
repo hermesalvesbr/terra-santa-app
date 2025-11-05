@@ -121,7 +121,7 @@ export function useParoquia() {
           paroquia: { _eq: paroquiaId },
           status: { _eq: 'published' },
         }),
-        sort: 'dia_semana,hora_inicio',
+        sort: 'tipo_servico,dia_semana,hora_inicio',
         fields: [
           'id',
           'tipo_servico',
@@ -130,6 +130,10 @@ export function useParoquia() {
           'hora_fim',
           'observacoes',
           'recorrente',
+          'tipo_recorrencia',
+          'dia_do_mes',
+          'periodo_data_inicio',
+          'periodo_data_fim',
         ].join(','),
       },
     })

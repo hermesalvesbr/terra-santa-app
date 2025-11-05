@@ -106,7 +106,7 @@ const goToDetail = () => navigateTo(detailRoute.value)
               {{ diocese.nome }}
             </h3>
             <div
-              class="text-body-2 text-medium-emphasis mb-4 diocese-description"
+              class="text-body-2 text-medium-emphasis mb-4 "
               v-html="descriptionHtml"
             />
             <div class="d-flex flex-wrap align-center" style="gap: 8px;">
