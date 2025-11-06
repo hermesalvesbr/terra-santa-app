@@ -55,6 +55,7 @@ const {
       'cidade',
       'uf',
       'capa.*',
+      'logo.*',
       'descricao',
       'whatsapp',
       'email',
@@ -160,6 +161,12 @@ const headerImageSrc = computed(() => {
   if (!paroquia.value?.capa)
     return ''
   return getImageUrl(paroquia.value.capa, { width: 1920, height: 500, fit: 'cover', quality: 85 })
+})
+
+const logoSrc = computed(() => {
+  if (!paroquia.value?.logo)
+    return ''
+  return getImageUrl(paroquia.value.logo, { width: 400, height: 400, fit: 'contain', quality: 90 })
 })
 
 const cityLabel = computed(() => {
@@ -284,6 +291,34 @@ interface CleroMembro {
   email?: string
   telefone?: string
   whatsapp?: string
+  instagram?: string
+  bio?: string
+  observacoes?: string
+  dataInicio?: string | null
+  dataFim?: string | null
+}
+
+const cargoLabels: Record<string, string> = {
+  paroco: 'Pároco',
+  vigario_paroquial: 'Vigário Paroquial',
+  administrador_paroquial: 'Administrador Paroquial',
+  cooperador: 'Sacerdote Cooperador',
+  diacono: 'Diácono',
+  seminarista: 'Seminarista',
+}
+
+function formatCargoLabel(cargo?: string): string {
+  if (!cargo)
+    return 'Sacerdote'
+
+  const normalized = cargo.toLowerCase()
+  if (cargoLabels[normalized])
+    return cargoLabels[normalized]
+
+  return cargo
+    .split('_')
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
 }
 
 const cleroMembros = computed<CleroMembro[]>(() => {
@@ -299,12 +334,17 @@ const cleroMembros = computed<CleroMembro[]>(() => {
       return {
         id: cleroData.id || item.id,
         nome: cleroData.nome || 'Nome não informado',
-        cargo: item.cargo || 'Sacerdote',
+        cargo: formatCargoLabel(item.cargo),
         hierarquia: cleroData.hierarquia || '',
         foto: cleroData.foto,
         email: cleroData.email,
         telefone: cleroData.telefone,
         whatsapp: cleroData.whatsapp,
+        instagram: cleroData.instagram,
+        bio: cleroData.bio,
+        observacoes: item.observacoes,
+        dataInicio: item.data_inicio,
+        dataFim: item.data_fim,
       }
     })
     .filter(Boolean) as CleroMembro[]
@@ -348,6 +388,16 @@ function formatData(data: string | null): string {
   catch {
     return data
   }
+}
+
+function formatPeriodoSacerdote(inicio?: string | null, fim?: string | null): string {
+  if (inicio && fim)
+    return `${formatData(inicio)} — ${formatData(fim)}`
+  if (inicio)
+    return `Desde ${formatData(inicio)}`
+  if (fim)
+    return `Até ${formatData(fim)}`
+  return ''
 }
 
 // Formatar recorrência
@@ -467,32 +517,36 @@ const socialLinks = computed(() => {
       </div>
 
       <v-container class="position-absolute bottom-0 left-0 right-0 pb-8">
-        <v-breadcrumbs
-          density="compact"
-          class="text-white pa-0 mb-3"
-          :items="[
-            { title: 'Início', to: '/', disabled: false },
-            { title: dioceseName, to: `/d/${dioceseSlug}`, disabled: false },
-            { title: paroquia.nome, disabled: true },
-          ]"
-        >
-          <template #divider>
-            <v-icon icon="mdi-chevron-right" size="small" />
-          </template>
-        </v-breadcrumbs>
+        <!-- Logo da paróquia acima do nome -->
+        <div v-if="logoSrc" class="d-flex justify-center mb-2">
+          <v-img
+            :src="logoSrc"
+            :height="90"
+            max-width="160"
+            position="center"
+            class="elevation-4 rounded-lg bg-grey-lighten-2 bg-opacity-75 pa-2"
+            contain
+          >
+            <template #placeholder>
+              <div class="d-flex align-center justify-center fill-height">
+                <v-icon icon="mdi-church" size="32" color="white" class="opacity-50" />
+              </div>
+            </template>
+          </v-img>
+        </div>
 
-        <h1 class="text-h3 text-md-h2 text-white font-weight-bold mb-3">
+        <h1 class="text-h5 text-md-h4 text-white font-weight-bold mb-2">
           {{ paroquia.nome }}
         </h1>
 
-        <div class="d-flex flex-wrap ga-4 text-white">
-          <v-chip color="white" variant="elevated" prepend-icon="mdi-map-marker">
+        <div class="d-flex flex-wrap ga-2 text-white">
+          <v-chip color="white" variant="elevated" prepend-icon="mdi-map-marker" size="small">
             {{ cityLabel }}
           </v-chip>
-          <v-chip v-if="dioceseName" color="white" variant="elevated" prepend-icon="mdi-church">
+          <v-chip v-if="dioceseName" color="white" variant="elevated" prepend-icon="mdi-church" size="small">
             {{ dioceseName }}
           </v-chip>
-          <v-chip v-if="paroquia.ano_criacao" color="white" variant="elevated" prepend-icon="mdi-calendar">
+          <v-chip v-if="paroquia.ano_criacao" color="white" variant="elevated" prepend-icon="mdi-calendar" size="small">
             Fundada em {{ paroquia.ano_criacao }}
           </v-chip>
         </div>
@@ -500,6 +554,24 @@ const socialLinks = computed(() => {
     </v-sheet>
 
     <v-container class="py-8">
+      <!-- Breadcrumbs na área de conteúdo -->
+      <v-breadcrumbs
+        density="compact"
+        class="pa-0 mb-4"
+        :items="[
+          { title: '', to: '/', disabled: false },
+          { title: dioceseName, to: `/d/${dioceseSlug}`, disabled: false },
+          { title: paroquia.nome, disabled: true },
+        ]"
+      >
+        <template #prepend>
+          <v-icon icon="mdi-home" size="small" />
+        </template>
+        <template #divider>
+          <v-icon icon="mdi-chevron-right" size="small" />
+        </template>
+      </v-breadcrumbs>
+
       <v-row>
         <!-- Coluna principal -->
         <v-col cols="12" lg="8">
@@ -570,6 +642,26 @@ const socialLinks = computed(() => {
                           {{ membro.cargo }}
                         </p>
 
+                        <v-chip
+                          v-if="membro.dataInicio || membro.dataFim"
+                          size="small"
+                          color="secondary"
+                          variant="tonal"
+                          class="mb-3"
+                        >
+                          <v-icon icon="mdi-calendar" size="16" class="mr-1" />
+                          {{ formatPeriodoSacerdote(membro.dataInicio, membro.dataFim) }}
+                        </v-chip>
+
+                        <div v-if="membro.bio" class="text-body-2 text-medium-emphasis mb-3">
+                          {{ membro.bio }}
+                        </div>
+
+                        <div v-if="membro.observacoes" class="text-body-2 mb-3">
+                          <v-icon icon="mdi-note-text" size="16" class="mr-1" />
+                          {{ membro.observacoes }}
+                        </div>
+
                         <!-- Contatos do membro -->
                         <div class="d-flex flex-wrap ga-2">
                           <v-btn
@@ -596,6 +688,15 @@ const socialLinks = computed(() => {
                             size="small"
                             color="teal"
                             variant="tonal"
+                          />
+                          <v-btn
+                            v-if="membro.instagram"
+                            :href="`https://instagram.com/${membro.instagram.replace('@', '')}`"
+                            icon="mdi-instagram"
+                            size="small"
+                            color="pink"
+                            variant="tonal"
+                            target="_blank"
                           />
                         </div>
                       </div>

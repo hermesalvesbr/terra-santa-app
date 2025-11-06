@@ -1,4 +1,4 @@
-import type { Paroquia, ParoquiaHorario } from '~/types/schema'
+import type { Paroquia, ParoquiaClero, ParoquiaHorario } from '~/types/schema'
 
 /**
  * Composable para facilitar queries relacionadas a paróquias no Directus
@@ -123,28 +123,62 @@ export function useParoquia() {
    * Busca clero (padres) de uma paróquia
    */
   async function getClero(paroquiaId: string) {
-    return await useFetch<any[]>('/api/directus/paroquia_clero', {
-      query: {
-        filter: JSON.stringify({
-          paroquia: { _eq: paroquiaId },
-          status: { _eq: 'published' },
-        }),
-        sort: 'sort',
-        fields: [
-          'id',
-          'cargo',
-          'data_inicio',
-          'data_fim',
-          'clero.id',
-          'clero.nome',
-          'clero.hierarquia',
-          'clero.foto.*',
-          'clero.email',
-          'clero.telefone',
-          'clero.whatsapp',
-        ].join(','),
+    const query = {
+      filter: JSON.stringify({
+        paroquia: { _eq: paroquiaId },
+        status: { _eq: 'published' },
+      }),
+      sort: JSON.stringify(['sort', 'clero.nome']),
+      fields: [
+        'id',
+        'cargo',
+        'data_inicio',
+        'data_fim',
+        'observacoes',
+        'clero.id',
+        'clero.slug',
+        'clero.nome',
+        'clero.hierarquia',
+        'clero.bio',
+        'clero.foto.*',
+        'clero.email',
+        'clero.telefone',
+        'clero.whatsapp',
+        'clero.instagram',
+      ].join(','),
+      deep: JSON.stringify({
+        clero: {
+          fields: [
+            'id',
+            'slug',
+            'nome',
+            'hierarquia',
+            'bio',
+            'foto.*',
+            'email',
+            'telefone',
+            'whatsapp',
+            'instagram',
+          ],
+        },
+      }),
+    }
+
+    const response = await $fetch<ParoquiaClero[] | { data?: ParoquiaClero[] }>(
+      '/api/directus/paroquia_clero',
+      {
+        method: 'GET',
+        query,
       },
-    })
+    )
+
+    const items = Array.isArray(response)
+      ? response
+      : Array.isArray(response?.data)
+        ? response.data!
+        : []
+
+    return items
   }
 
   return {
