@@ -1,4 +1,4 @@
-import type { Paroquia } from '~/types/schema'
+import type { Paroquia, ParoquiaHorario } from '~/types/schema'
 
 /**
  * Composable para facilitar queries relacionadas a paróquias no Directus
@@ -78,65 +78,45 @@ export function useParoquia() {
   }
 
   /**
-   * Busca eventos de uma paróquia
-   */
-  async function getEventos(paroquiaId: string, options?: {
-    limit?: number
-    proximos?: boolean
-    passados?: boolean
-  }) {
-    const filter: Record<string, any> = {
-      paroquia: { _eq: paroquiaId },
-      status: { _eq: 'published' },
-    }
-
-    const now = new Date().toISOString()
-
-    if (options?.proximos) {
-      filter.data_inicio = { _gte: now }
-    }
-    else if (options?.passados) {
-      filter.data_inicio = { _lt: now }
-    }
-
-    const sort = options?.passados ? '-data_inicio' : 'data_inicio'
-
-    return await useFetch<any[]>('/api/directus/evento', {
-      query: {
-        filter: JSON.stringify(filter),
-        limit: options?.limit || 10,
-        sort,
-        fields: ['id', 'titulo', 'descricao', 'data_inicio', 'data_fim', 'local', 'capa.*'].join(','),
-      },
-    })
-  }
-
-  /**
    * Busca horários de missa de uma paróquia
    */
   async function getHorarios(paroquiaId: string) {
-    return await useFetch<any[]>('/api/directus/paroquia_horarios', {
-      query: {
-        filter: JSON.stringify({
-          paroquia: { _eq: paroquiaId },
-          status: { _eq: 'published' },
-        }),
-        sort: 'tipo_servico,dia_semana,hora_inicio',
-        fields: [
-          'id',
-          'tipo_servico',
-          'dia_semana',
-          'hora_inicio',
-          'hora_fim',
-          'observacoes',
-          'recorrente',
-          'tipo_recorrencia',
-          'dia_do_mes',
-          'periodo_data_inicio',
-          'periodo_data_fim',
-        ].join(','),
+    const query = {
+      filter: JSON.stringify({
+        paroquia: { _eq: paroquiaId },
+        status: { _eq: 'published' },
+      }),
+      sort: JSON.stringify(['tipo_servico', 'hora_inicio']),
+      fields: [
+        'id',
+        'tipo_servico',
+        'dia_semana',
+        'hora_inicio',
+        'hora_fim',
+        'observacoes',
+        'recorrente',
+        'tipo_recorrencia',
+        'dia_do_mes',
+        'periodo_data_inicio',
+        'periodo_data_fim',
+      ].join(','),
+    }
+
+    const response = await $fetch<ParoquiaHorario[] | { data?: ParoquiaHorario[] }>(
+      '/api/directus/paroquia_horarios',
+      {
+        method: 'GET',
+        query,
       },
-    })
+    )
+
+    const items = Array.isArray(response)
+      ? response
+      : Array.isArray(response?.data)
+        ? response.data!
+        : []
+
+    return items
   }
 
   /**
@@ -171,7 +151,6 @@ export function useParoquia() {
     getParoquiaById,
     getParoquias,
     getCapelas,
-    getEventos,
     getHorarios,
     getClero,
   }

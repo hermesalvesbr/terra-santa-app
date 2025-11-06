@@ -25,7 +25,6 @@ const paroquiaParam = computed(() => {
 
 const { getImageUrl } = useDirectusAsset()
 const { getHorarios, getClero } = useParoquia()
-
 // Cores para os dias da semana
 const diasCores: Record<string, string> = {
   Segunda: 'deep-purple',

@@ -3,58 +3,49 @@ import { readItems } from '@directus/sdk'
 import { directus } from '../utils/directus'
 
 /**
- * API Route para Directus SDK 20.0.0 - Suporte Completo a Parâmetros de Query
+ * API universal do Terra Santa para leitura de collections do Directus
  *
  * PARÂMETROS SUPORTADOS:
  * =====================
  *
  * 🔍 FILTROS E BUSCA:
- * - filter: Filtros de dados usando operadores Directus (_eq, _in, _between, etc.)
+ * - filter: Objetos JSON com operadores Directus (_eq, _in, _between, etc.)
  * - search: Busca full-text em campos textuais da collection
  *
  * 📊 PAGINAÇÃO:
- * - limit: Número máximo de itens retornados (padrão: 10, -1 para todos)
- * - offset: Número de itens para pular (para paginação manual)
- * - page: Página atual (alternativa ao offset, calculado automaticamente)
+ * - limit: Quantidade máxima de registros (padrão: 10, -1 para todos)
+ * - offset: Quantos itens pular (para paginação manual)
+ * - page: Página atual (alternativa ao offset)
  *
  * 📋 SELEÇÃO DE DADOS:
- * - fields: Campos a serem retornados (string CSV ou array JSON)
- * - sort: Ordenação dos resultados (string ou array, use '-' para desc)
+ * - fields: Campos retornados (CSV ou JSON array)
+ * - sort: Ordenação dos resultados (string ou array, prefixe com '-' para desc)
  *
  * 🔗 RELACIONAMENTOS:
- * - deep: Filtragem e limitação de dados relacionados aninhados
- * - alias: Renomeação de campos e múltiplas queries do mesmo relacionamento
+ * - deep: Controle de dados relacionados (ex.: capelas de uma paróquia)
+ * - alias: Renomeação de campos ou múltiplas instâncias do mesmo relacionamento
  *
  * 📈 AGREGAÇÃO:
- * - aggregate: Funções de agregação (count, sum, avg, min, max)
- * - groupBy: Agrupamento para cálculos agregados
+ * - aggregate: count, sum, avg, min, max
+ * - groupBy: Agrupamentos para relatórios pastorais
  *
  * 🔖 VERSIONAMENTO:
- * - version: Versão específica do conteúdo (draft, published, etc.)
+ * - version: Conteúdo por versão (draft, published, etc.)
  *
- * 🏛️ MUNICÍPIO:
- * - cidade: Filtro automático aplicado baseado em SOFTAGON_CIDADE_ID
+ * EXEMPLOS DE USO NO PROJETO:
+ * ==========================
  *
- * EXEMPLOS DE USO:
- * ===============
+ * Listar dioceses publicadas:
+ * GET /api/directus/diocese?filter={"status":{"_eq":"published"}}&sort=nome
  *
- * Busca básica:
- * GET /api/directus/noticias?limit=5&sort=-date_created
+ * Buscar paróquias de uma diocese:
+ * GET /api/directus/paroquia?filter={"diocese":{"_eq":"<diocese-id>"}}
  *
- * Filtros complexos:
- * GET /api/directus/noticias?filter={"status":{"_eq":"published"}}&search=prefeitura
+ * Agenda de uma paróquia com horários ordenados:
+ * GET /api/directus/paroquia_horarios?filter={"paroquia":{"_eq":"<paroquia-id>"}}&sort=["tipo_servico","hora_inicio"]
  *
- * Campos específicos:
- * GET /api/directus/noticias?fields=["id","titulo","slug"]
- *
- * Paginação:
- * GET /api/directus/noticias?page=2&limit=10
- *
- * Relacionamentos profundos:
- * GET /api/directus/noticias?deep={"autor":{"_filter":{"ativo":{"_eq":true}}}}
- *
- * Agregação:
- * GET /api/directus/noticias?aggregate={"count":"*"}&groupBy=["secretaria"]
+ * Trazer clero com dados relacionais:
+ * GET /api/directus/paroquia_clero?fields=["id","cargo","clero.nome","clero.hierarquia","clero.foto.*"]
  *
  */
 
@@ -62,21 +53,15 @@ import { directus } from '../utils/directus'
  * Helper para processar parâmetros de query automaticamente do Directus SDK 20.0.0
  * Suporta todos os parâmetros globais: fields, filter, sort, limit, offset, page, search, deep, alias, aggregate, groupBy
  */
-function processQueryParams(query: Record<string, any>, collection: string) {
+function processQueryParams(query: Record<string, any>) {
   // Parâmetros numéricos
   const limit = query.limit ? Number(query.limit) : 10
   const offset = query.offset ? Number(query.offset) : undefined
   const page = query.page ? Number(query.page) : undefined
 
-  // Padrão cidadeId do runtimeConfig
-  const config = useRuntimeConfig()
-  const cidadeId = config.public.cityId
-
   // Parâmetros especiais que devem ser extraídos separadamente
   const specialParams = ['limit', 'offset', 'page', 'sort', 'search', 'fields', 'deep', 'alias', 'aggregate', 'groupBy', 'version']
   const filters: Record<string, any> = {}
-
-  let hasCidade = false
 
   for (const [key, value] of Object.entries(query)) {
     if (key === 'filter') {
@@ -95,8 +80,6 @@ function processQueryParams(query: Record<string, any>, collection: string) {
 
       if (parsed) {
         Object.assign(filters, parsed)
-        if (Object.prototype.hasOwnProperty.call(parsed, 'cidade'))
-          hasCidade = true
       }
 
       continue
@@ -105,11 +88,6 @@ function processQueryParams(query: Record<string, any>, collection: string) {
     // Parâmetros especiais são processados separadamente
     if (specialParams.includes(key)) {
       continue
-    }
-
-    // Detecta se é filtro de cidade
-    if (key === 'cidade') {
-      hasCidade = true
     }
 
     // Se é uma string, tenta fazer parse JSON
@@ -127,11 +105,6 @@ function processQueryParams(query: Record<string, any>, collection: string) {
     else {
       filters[key] = value
     }
-  }
-
-  // Se não veio cidade explicitamente E não é a collection cidade, aplica padrão
-  if (!hasCidade && cidadeId && collection !== 'cidade') {
-    filters.cidade = { _eq: cidadeId }
   }
 
   // Processar parâmetros especiais
@@ -322,7 +295,7 @@ export default defineEventHandler(async (event) => {
   // Método GET - Buscar itens (comportamento existente)
   if (method === 'GET') {
     // Processar parâmetros automaticamente com suporte completo ao SDK 20.0.0
-    const processedParams = processQueryParams(query, collection)
+    const processedParams = processQueryParams(query)
 
     try {
     // Separar filtros dos parâmetros especiais
